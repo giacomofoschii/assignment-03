@@ -1,4 +1,4 @@
-package pcd.ass01;
+package pcd.ass03;
 
 public class BoidsSimulation {
 
