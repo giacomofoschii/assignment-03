@@ -1,2 +1,6 @@
 .bsp/
 target/
+.idea/
+!.idea/codeStyles
+!.idea/runConfigurations
+!.idea/modules/

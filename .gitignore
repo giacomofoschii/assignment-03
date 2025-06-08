@@ -69,6 +69,7 @@ fabric.properties
 .idea/
 !.idea/codeStyles
 !.idea/runConfigurations
+!.idea/modules/
 
 # mac os stuff
 *.DS_Store
