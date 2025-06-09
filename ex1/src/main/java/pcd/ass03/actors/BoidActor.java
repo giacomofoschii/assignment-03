@@ -10,22 +10,6 @@ import java.time.Duration;
 import java.util.List;
 
 public class BoidActor {
-
-    public BoidActor(ActorContext<BoidProtocol.Command> context, String boidId,
-                     ActorRef<ManagerProtocol.Command> manager, ActorRef<NeighborProtocol.Command> neighborManager) {
-        this.context = context;
-        this.boidId = boidId;
-        this.manager = manager;
-        this.neighborManager = neighborManager;
-    }
-
-    public static Behavior<BoidProtocol.Command> create(String boidId, ActorRef<ManagerProtocol.Command> manager,
-                                                        ActorRef<NeighborProtocol.Command> neighborManager) {
-        // Implementation of the BoidActor behavior goes here
-        return Behaviors.setup(context -> new BoidActor(context, boidId,
-                manager, neighborManager).behavior());
-    }
-
     private final ActorContext<BoidProtocol.Command> context;
     private final String boidId;
     private final ActorRef<ManagerProtocol.Command> manager;
@@ -33,23 +17,26 @@ public class BoidActor {
 
     private P2d position;
     private V2d velocity;
-    private final BoidsParams params = new BoidsParams();
+    private final BoidsParams params;
 
     public BoidActor(ActorContext<BoidProtocol.Command> context, String boidId, P2d initialPos,
-                     ActorRef<ManagerProtocol.Command> manager, ActorRef<NeighborProtocol.Command> neighborManager) {
+                     ActorRef<ManagerProtocol.Command> manager, ActorRef<NeighborProtocol.Command> neighborManager,
+                     BoidsParams params) {
         this.context = context;
         this.boidId = boidId;
         this.position = initialPos;
         this.manager = manager;
         this.neighborManager = neighborManager;
+        this.params = params;
     }
 
     public static Behavior<BoidProtocol.Command> create(String boidId, P2d initialPos,
                                                         ActorRef<ManagerProtocol.Command> manager,
-                                                        ActorRef<NeighborProtocol.Command> neighborManager) {
+                                                        ActorRef<NeighborProtocol.Command> neighborManager,
+                                                        BoidsParams params) {
         // Implementation of the BoidActor behavior goes here
         return Behaviors.setup(context -> new BoidActor(context, boidId, initialPos,
-                manager, neighborManager).behavior());
+                manager, neighborManager, params).behavior());
     }
 
     private Behavior<BoidProtocol.Command> behavior() {
@@ -88,7 +75,6 @@ public class BoidActor {
                 .sum(cohesion.mul(params.getCohesionWeight()));
 
         /* Limit speed to MAX_SPEED */
-
         double speed = velocity.abs();
 
         if (speed > params.getMaxSpeed()) {
@@ -96,11 +82,9 @@ public class BoidActor {
         }
 
         /* Update position */
-
         position = position.sum(velocity);
 
         /* environment wrap-around */
-
         if (position.x() < params.getMinX()) position = position.sum(new V2d(params.getWidth(), 0));
         if (position.x() >= params.getMaxX()) position = position.sum(new V2d(-params.getWidth(), 0));
         if (position.y() < params.getMinY()) position = position.sum(new V2d(0, params.getHeight()));

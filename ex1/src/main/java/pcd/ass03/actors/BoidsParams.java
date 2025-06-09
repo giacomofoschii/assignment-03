@@ -4,18 +4,21 @@ public class BoidsParams {
     private double separationWeight = 1.0;
     private double alignmentWeight = 1.0;
     private double cohesionWeight = 1.0;
-    private final double maxSpeed = 4.0;
-    private final double perceptionRadius = 50.0;
-    private final double avoidRadius = 20.0;
+    private final double width;
+    private final double height;
 
-    final static int N_BOIDS = 1500;
+    public BoidsParams(final double width, final double height) {
+        this.height = height;
+        this.width = width;
+    }
 
-    final static double SEPARATION_WEIGHT = 1.0;
-    final static double ALIGNMENT_WEIGHT = 1.0;
-    final static double COHESION_WEIGHT = 1.0;
+    public double getWidth() {
+        return width;
+    }
 
-    final static int ENVIRONMENT_WIDTH = 1000;
-    final static int ENVIRONMENT_HEIGHT = 1000;
+    public double getHeight() {
+        return height;
+    }
 
     public double getAlignmentWeight() {
         return alignmentWeight;
@@ -42,14 +45,30 @@ public class BoidsParams {
     }
 
     public double getAvoidRadius() {
-        return avoidRadius;
+        return 20.0;
     }
 
     public double getMaxSpeed() {
-        return maxSpeed;
+        return 4.0;
     }
 
     public double getPerceptionRadius() {
-        return perceptionRadius;
+        return 50.0;
+    }
+
+    public double getMinX() {
+        return -width/2;
+    }
+
+    public double getMaxX() {
+        return width/2;
+    }
+
+    public double getMinY() {
+        return -height/2;
+    }
+
+    public double getMaxY() {
+        return height/2;
     }
 }

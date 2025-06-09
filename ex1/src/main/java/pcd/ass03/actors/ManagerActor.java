@@ -44,6 +44,7 @@ public class ManagerActor {
         int nBoids = cmd.nBoids();
         double width = cmd.width();
         double height = cmd.height();
+        BoidsParams params = new BoidsParams(width, height);
 
         // Create NeighborhoodManager
         ActorRef<NeighborProtocol.Command> neighborManager = context.spawn(
@@ -63,7 +64,7 @@ public class ManagerActor {
             P2d initialPos = new P2d(-width / 2 * Math.random() * width,
                     -height / 2 * height);
             ActorRef<BoidProtocol.Command> boidRef = context.spawn(
-                    BoidActor.create(id, initialPos, context.getSelf(), neighborManager),
+                    BoidActor.create(id, initialPos, context.getSelf(), neighborManager, params),
                     id
             );
 
