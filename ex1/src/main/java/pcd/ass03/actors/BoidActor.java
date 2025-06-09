@@ -13,26 +13,30 @@ public class BoidActor {
     private final ActorContext<BoidProtocol.Command> context;
     private final String boidId;
     private final ActorRef<NeighborProtocol.Command> neighborManager;
+    private final ActorRef<ManagerProtocol.Command> managerActor;
 
     private P2d position;
     private V2d velocity;
     private final BoidsParams params;
 
     public BoidActor(ActorContext<BoidProtocol.Command> context, String boidId, P2d initialPos,
-                     ActorRef<NeighborProtocol.Command> neighborManager, BoidsParams params) {
+                     ActorRef<NeighborProtocol.Command> neighborManager, BoidsParams params,
+                     ActorRef<ManagerProtocol.Command> managerActor) {
         this.context = context;
         this.boidId = boidId;
         this.position = initialPos;
         this.neighborManager = neighborManager;
         this.params = params;
+        this.managerActor = managerActor;
     }
 
     public static Behavior<BoidProtocol.Command> create(String boidId, P2d initialPos,
                                                         ActorRef<NeighborProtocol.Command> neighborManager,
-                                                        BoidsParams params) {
+                                                        BoidsParams params,
+                                                        ActorRef<ManagerProtocol.Command> managerActor) {
         // Implementation of the BoidActor behavior goes here
         return Behaviors.setup(context -> new BoidActor(context, boidId, initialPos,
-                neighborManager, params).behavior());
+                neighborManager, params, managerActor).behavior());
     }
 
     private Behavior<BoidProtocol.Command> behavior() {
@@ -85,6 +89,9 @@ public class BoidActor {
         if (position.x() >= params.getMaxX()) position = position.sum(new V2d(-params.getWidth(), 0));
         if (position.y() < params.getMinY()) position = position.sum(new V2d(0, params.getHeight()));
         if (position.y() >= params.getMaxY()) position = position.sum(new V2d(0, -params.getHeight()));
+
+        managerActor.tell(new ManagerProtocol.BoidUpdated(position, velocity, boidId));
+
         return Behaviors.same();
     }
 
