@@ -34,14 +34,14 @@ public class BoidsSimulator {
     		/* 
     		 * Improved correctness: first update velocities...
     		 */
-    		for (BoidState boid : boids) {
+    		for (Boid boid : boids) {
                 //boid.updateVelocity(model);
             }
 
     		/* 
     		 * ..then update positions
     		 */
-    		for (BoidState boid : boids) {
+    		for (Boid boid : boids) {
                 //boid.updatePos(model);
             }
 
