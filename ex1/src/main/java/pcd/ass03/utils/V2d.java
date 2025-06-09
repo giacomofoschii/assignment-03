@@ -7,7 +7,7 @@
  * Use is subject to license terms.
  *
  */
-package pcd.ass03;
+package pcd.ass03.utils;
 
 /**
  *
