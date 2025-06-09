@@ -22,20 +22,20 @@ public class GUIActor implements ChangeListener {
     private final BoidsParams boidsParams;
     private final ActorRef<ManagerProtocol.Command> managerActor;
 
-    private GUIActor(BoidsParams boidsParams, double width, double height, Map<String, BoidState> boids,
+    private GUIActor(BoidsParams boidsParams, Map<String, BoidState> boids,
                      ActorRef<ManagerProtocol.Command> managerActor) {
         this.boidsParams = boidsParams;
         this.managerActor = managerActor;
-        int width1 = (int) Math.round(width);
-        int height1 = (int) Math.round(height);
+        final int envWidth = (int) Math.round(boidsParams.getWidth());
+        final int envHeight = (int) Math.round(boidsParams.getHeight());
 
         // Initialize the GUI components
         JFrame frame = new JFrame("Boids Simulation");
-        frame.setSize(width1, height1);
+        frame.setSize(SCREEN_WIDTH, SCREEN_HEIGHT);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
         JPanel cp = new JPanel(new BorderLayout());
-        this.boidsPanel = new BoidsPanel(width1, height1, boids.size(), boids.values().stream().toList());
+        this.boidsPanel = new BoidsPanel(envWidth, envHeight, boids.size(), boids.values().stream().toList());
         cp.add(BorderLayout.CENTER, boidsPanel);
 
         JPanel slidersPanel = new JPanel(new GridLayout(3, 1));
@@ -55,10 +55,9 @@ public class GUIActor implements ChangeListener {
         frame.setVisible(true);
     }
 
-    public static Behavior<GUIProtocol.Command> create(BoidsParams boidsParams, double width, double height,
-                                                       Map<String, BoidState> boids,
+    public static Behavior<GUIProtocol.Command> create(BoidsParams boidsParams, Map<String, BoidState> boids,
                                                        ActorRef<ManagerProtocol.Command> managerActor) {
-        return Behaviors.setup(ctx -> new GUIActor(boidsParams, width, height, boids, managerActor).behavior());
+        return Behaviors.setup(ctx -> new GUIActor(boidsParams, boids, managerActor).behavior());
     }
 
     private Behavior<GUIProtocol.Command> behavior() {

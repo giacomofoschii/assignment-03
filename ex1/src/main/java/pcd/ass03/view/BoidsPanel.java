@@ -9,15 +9,19 @@ import java.util.List;
 
 public class BoidsPanel extends JPanel {
 
-	private final int width, height, nBoids;
-    private int framerate;
-    private final List<BoidState> boids;
+	private int framerate;
+    private final int envWidth, envHeight, nBoids;
+    private List<BoidState> boids;
 
-    public BoidsPanel(int width, int height, int nBoids, List<BoidState> boids) {
-    	this.width = width;
-        this.height = height;
+    public BoidsPanel(int envWidth, int envHeight, int nBoids, List<BoidState> boids) {
+    	this.envWidth = envWidth;
+        this.envHeight = envHeight;
         this.nBoids = nBoids;
         this.boids = boids;
+    }
+
+    public void updateBoids(List<BoidState> newBoids) {
+        this.boids = newBoids;
     }
 
     public void setFrameRate(int framerate) {
@@ -31,9 +35,8 @@ public class BoidsPanel extends JPanel {
         
         var w = GUIActor.SCREEN_WIDTH;
         var h = GUIActor.SCREEN_HEIGHT;
-        var envWidth = this.width;
-        var xScale = w/envWidth;
-        // var envHeight = this.height;
+        var envWidth = this.envWidth;
+        var xScale = w/this.envWidth;
         // var yScale = h/envHeight;
 
         g.setColor(Color.BLUE);

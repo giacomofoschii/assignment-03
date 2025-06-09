@@ -53,18 +53,22 @@ public class ManagerActor {
             String id = "boid-" + i;
             P2d initialPos = new P2d(-width / 2 * Math.random() * width,
                     -height / 2 * height);
+            V2d initialVel = new V2d(
+                    (Math.random() - 0.5) * 2,
+                    (Math.random() - 0.5) * 2
+            );
             ActorRef<BoidProtocol.Command> boidRef = context.spawn(
                     BoidActor.create(id, initialPos, neighborManager, params, this.context.getSelf()),
                     id
             );
 
             this.boidActors.put(id, boidRef);
-            this.currentStates.put(id, new BoidState(initialPos, new V2d(0, 0), id));
+            this.currentStates.put(id, new BoidState(initialPos, initialVel, id));
         }
 
         // Create GUIActor
         ActorRef<GUIProtocol.Command> guiActor = context.spawn(
-                GUIActor.create(params, width, height, this.currentStates, this.context.getSelf()),
+                GUIActor.create(params, this.currentStates, this.context.getSelf()),
                 "gui-actor"
         );
 
