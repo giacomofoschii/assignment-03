@@ -1,8 +1,7 @@
 package pcd.ass03.protocols;
 
 import akka.actor.typed.ActorRef;
-import pcd.ass03.model.BoidState;
-import pcd.ass03.model.StateResponse;
+import pcd.ass03.model.*;
 
 import java.util.List;
 
@@ -22,30 +21,12 @@ public interface BoidProtocol {
      * Response interface for Boid actors.
      * All responses from Boid actors must implement this interface.
      */
-    record UpdateRequest(long tick) implements Command {
-        public UpdateRequest {
-            if (tick < 0) {
-                throw new IllegalArgumentException("Tick must be non-negative");
-            }
-        }
+    record UpdateRequest(long tick, List<BoidState> boids) implements Command {
     }
 
     record NeighborsInfo(String boidId, List<BoidState> neighbors) implements Command {
-        public NeighborsInfo {
-            if (neighbors == null) {
-                throw new IllegalArgumentException("Neighbors list cannot be null");
-            }
-            if (boidId == null || boidId.isEmpty()) {
-                throw new IllegalArgumentException("Boid ID cannot be null or empty");
-            }
-        }
     }
 
     record GetState(ActorRef<StateResponse> replyTo) implements Command {
-        public GetState {
-            if (replyTo == null) {
-                throw new IllegalArgumentException("ReplyTo actor reference cannot be null");
-            }
-        }
     }
 }

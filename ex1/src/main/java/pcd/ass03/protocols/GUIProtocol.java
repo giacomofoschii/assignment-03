@@ -9,6 +9,5 @@ public interface GUIProtocol {
 
     interface Command {}
 
-    record RenderFrame(List<BoidState> boids,
-                       SimulationMetrics metrics) implements Command {}
+    record RenderFrame(List<BoidState> boids, SimulationMetrics metrics) implements Command {}
 }

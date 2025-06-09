@@ -17,9 +17,7 @@ public interface ManagerProtocol {
      * @param width the width of the simulation area
      * @param height the height of the simulation area
      */
-    record StartSimulation(int nBoids,
-                           double width,
-                           double height) implements Command {}
+    record StartSimulation(int nBoids, double width, double height) implements Command {}
 
     /**
      * Stop the simulation.
@@ -38,9 +36,7 @@ public interface ManagerProtocol {
      * @param velocity the new velocity of the boid
      * @param boidId the unique identifier of the boid
      */
-    record BoidUpdated(P2d position,
-                       V2d velocity,
-                       String boidId) implements Command {}
+    record BoidUpdated(P2d position, V2d velocity, String boidId) implements Command {}
 
     /**
      * Command to update the parameters of the simulation, setted by user from GUI.
@@ -49,7 +45,5 @@ public interface ManagerProtocol {
      * @param alignment alignment factor
      * @param separation separation factor
      */
-    record UpdateParams(double cohesion,
-                        double alignment,
-                        double separation) implements Command {}
+    record UpdateParams(double cohesion, double alignment, double separation) implements Command {}
 }

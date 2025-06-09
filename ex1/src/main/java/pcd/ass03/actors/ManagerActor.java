@@ -10,7 +10,7 @@ import pcd.ass03.utils.*;
 import java.time.Duration;
 import java.util.*;
 
-public class SimulationManagerActor {
+public class ManagerActor {
 
     private final ActorContext<ManagerProtocol.Command> context;
     private final TimerScheduler<ManagerProtocol.Command> timers;
@@ -18,9 +18,9 @@ public class SimulationManagerActor {
     private final Map<String, ActorRef<BoidProtocol.Command>> boidActors = new HashMap<>();
     private final BoidsView view;
 
-    private SimulationManagerActor(ActorContext<ManagerProtocol.Command> context,
-                                   TimerScheduler<ManagerProtocol.Command> timers,
-                                   BoidsView view) {
+    private ManagerActor(ActorContext<ManagerProtocol.Command> context,
+                         TimerScheduler<ManagerProtocol.Command> timers,
+                         BoidsView view) {
         this.context = context;
         this.timers = timers;
         this.view = view;
@@ -29,7 +29,7 @@ public class SimulationManagerActor {
     public static Behavior<ManagerProtocol.Command> create(BoidsView view) {
         return Behaviors.setup(context ->
             Behaviors.withTimers(timers ->
-                new SimulationManagerActor(context, timers, view).idle()
+                new ManagerActor(context, timers , view).idle()
             )
         );
     }
@@ -46,9 +46,9 @@ public class SimulationManagerActor {
         double height = cmd.height();
 
         // Create NeighborhoodManager
-        ActorRef<NeighborProtocol.Command> neighborhoodManager = context.spawn(
+        ActorRef<NeighborProtocol.Command> neighborManager = context.spawn(
                 NeighborActor.create(),
-                "neighborhood-manager"
+                "neighbor-manager"
         );
 
         // Create GUIActor
@@ -63,7 +63,7 @@ public class SimulationManagerActor {
             P2d initialPos = new P2d(-width / 2 * Math.random() * width,
                     -height / 2 * height);
             ActorRef<BoidProtocol.Command> boidRef = context.spawn(
-                    BoidActor.create(id, initialPos, context.getSelf()),
+                    BoidActor.create(id, initialPos, context.getSelf(), neighborManager),
                     id
             );
 
