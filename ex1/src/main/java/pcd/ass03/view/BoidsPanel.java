@@ -35,7 +35,6 @@ public class BoidsPanel extends JPanel {
         
         var w = GUIActor.SCREEN_WIDTH;
         var h = GUIActor.SCREEN_HEIGHT;
-        var envWidth = this.envWidth;
         var xScale = w/this.envWidth;
         // var yScale = h/envHeight;
 
