@@ -1,17 +1,12 @@
 package pcd.ass03.actors;
 
 import akka.actor.typed.Behavior;
-import akka.actor.typed.javadsl.ActorContext;
-import akka.actor.typed.javadsl.Behaviors;
-import pcd.ass03.Boid;
+import akka.actor.typed.javadsl.*;
 import pcd.ass03.model.BoidState;
-import pcd.ass03.protocols.BoidProtocol;
-import pcd.ass03.protocols.NeighborProtocol;
-import pcd.ass03.utils.P2d;
+import pcd.ass03.protocols.*;
+import pcd.ass03.utils.*;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 public class NeighborActor {
 
@@ -33,23 +28,21 @@ public class NeighborActor {
 
     private Behavior<NeighborProtocol.Command> onGetNeighbors(NeighborProtocol.GetNeighbors command) {
         // Logic to find neighbors within the specified radius
+        List<BoidState> neighbors = new ArrayList<>();
         P2d position = positions.get(command.boidId());
-        String actual = command.boidId();
+        List<BoidState> boids = command.allBoids();
         if (position != null) {
-            // Find neighbors logic here
-            var neighborList = new ArrayList<BoidState>();
-            for (String other : model.getBoids()) {
-                if (other != actual ) {
-                    P2d otherPos = other.getPos();
-                    double distance = pos.distance(otherPos);
-                    if (distance < model.getPerceptionRadius()) {
-                        list.add(other);
+            for (BoidState other : boids) {
+                if (!Objects.equals(other.id(), command.boidId())) {
+                    P2d otherPos = other.pos();
+                    double distance = position.distance(otherPos);
+                    if (distance < command.radius()) {
+                        neighbors.add(other);
                     }
                 }
             }
-            return list;
             // For now, just reply with an empty list
-            command.replyTo().tell(new BoidProtocol.NeighborsInfo(command.boidId(), new ArrayList<>()));
+            command.replyTo().tell(new BoidProtocol.NeighborsInfo(command.boidId(), neighbors));
         }
         return Behaviors.same();
     }
