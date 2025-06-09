@@ -26,7 +26,4 @@ public interface BoidProtocol {
 
     record NeighborsInfo(String boidId, List<BoidState> neighbors) implements Command {
     }
-
-    record GetState(ActorRef<StateResponse> replyTo) implements Command {
-    }
 }

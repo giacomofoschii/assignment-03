@@ -1,7 +1,11 @@
 package pcd.ass03.view;
 
+import pcd.ass03.actors.GUIActor;
+import pcd.ass03.model.BoidState;
+
 import javax.swing.*;
 import java.awt.*;
+import java.util.List;
 
 public class BoidsPanel extends JPanel {
 
@@ -32,19 +36,17 @@ public class BoidsPanel extends JPanel {
         // var envHeight = this.height;
         // var yScale = h/envHeight;
 
-        var boids = model.getBoids();
-
         g.setColor(Color.BLUE);
-        for (Boid boid : boids) {
-        	var x = boid.getPos().x();
-        	var y = boid.getPos().y();
+        for (BoidState boid : boids) {
+        	var x = boid.pos().x();
+        	var y = boid.pos().y();
         	int px = (int)(w/2 + x*xScale);
         	int py = (int)(h/2 - y*xScale);
             g.fillOval(px,py, 5, 5);
         }
         
         g.setColor(Color.BLACK);
-        g.drawString("Num. Boids: " + boids.size(), 10, 25);
+        g.drawString("Num. Boids: " + nBoids, 10, 25);
         g.drawString("Framerate: " + framerate, 10, 40);
    }
 }

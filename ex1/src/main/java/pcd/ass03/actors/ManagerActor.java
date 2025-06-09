@@ -48,12 +48,6 @@ public class ManagerActor {
                 "neighbor-manager"
         );
 
-        // Create GUIActor
-        ActorRef<GUIProtocol.Command> guiActor = context.spawn(
-                GUIActor.create(this.view),
-                "gui-actor"
-        );
-
         // Create Boid actors
         for (int i = 0; i < nBoids; i++) {
             String id = "boid-" + i;
@@ -67,6 +61,12 @@ public class ManagerActor {
             this.boidActors.put(id, boidRef);
             this.currentStates.put(id, new BoidState(initialPos, new V2d(0, 0), id));
         }
+
+        // Create GUIActor
+        ActorRef<GUIProtocol.Command> guiActor = context.spawn(
+                GUIActor.create(params, width, height, this.currentStates),
+                "gui-actor"
+        );
 
         // Schedule the first tick
         timers.startTimerAtFixedRate(new ManagerProtocol.Tick(), Duration.ofMillis(40));

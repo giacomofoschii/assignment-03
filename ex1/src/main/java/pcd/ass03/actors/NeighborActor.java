@@ -10,11 +10,8 @@ import java.util.*;
 
 public class NeighborActor {
 
-    public NeighborActor(ActorContext<NeighborProtocol.Command> context) {
-    }
-
     public static Behavior<NeighborProtocol.Command> create() {
-        return Behaviors.setup(context -> new NeighborActor(context).behavior());
+        return Behaviors.setup(ctx -> new NeighborActor().behavior());
     }
 
     private final Map<String, P2d> positions = new HashMap<>();
