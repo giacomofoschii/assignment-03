@@ -30,10 +30,13 @@ public interface BoidProtocol {
         }
     }
 
-    record NeighborsInfo(List<BoidState> neighbors) implements Command {
+    record NeighborsInfo(String boidId, List<BoidState> neighbors) implements Command {
         public NeighborsInfo {
             if (neighbors == null) {
                 throw new IllegalArgumentException("Neighbors list cannot be null");
+            }
+            if (boidId == null || boidId.isEmpty()) {
+                throw new IllegalArgumentException("Boid ID cannot be null or empty");
             }
         }
     }

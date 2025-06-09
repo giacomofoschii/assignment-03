@@ -7,7 +7,8 @@ import pcd.ass03.utils.*;
 
 public class BoidActor {
 
-    public BoidActor(ActorContext<BoidProtocol.Command> context, String boidId, ActorRef<ManagerProtocol.Command> manager) {
+    public BoidActor(ActorContext<BoidProtocol.Command> context, String boidId,
+                     ActorRef<ManagerProtocol.Command> manager) {
         this.context = context;
         this.boidId = boidId;
         this.manager = manager;

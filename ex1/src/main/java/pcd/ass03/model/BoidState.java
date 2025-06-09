@@ -1,11 +1,9 @@
 package pcd.ass03.model;
 
 import pcd.ass03.BoidsModel;
-import pcd.ass03.utils.P2d;
-import pcd.ass03.utils.V2d;
+import pcd.ass03.utils.*;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 public record BoidState (P2d pos, V2d vel, String id) {
     
