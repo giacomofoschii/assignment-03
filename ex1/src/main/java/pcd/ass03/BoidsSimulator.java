@@ -1,5 +1,7 @@
 package pcd.ass03;
 
+import pcd.ass03.model.BoidState;
+
 import java.util.Optional;
 
 public class BoidsSimulator {
@@ -32,15 +34,15 @@ public class BoidsSimulator {
     		/* 
     		 * Improved correctness: first update velocities...
     		 */
-    		for (Boid boid : boids) {
-                boid.updateVelocity(model);
+    		for (BoidState boid : boids) {
+                //boid.updateVelocity(model);
             }
 
     		/* 
     		 * ..then update positions
     		 */
-    		for (Boid boid : boids) {
-                boid.updatePos(model);
+    		for (BoidState boid : boids) {
+                //boid.updatePos(model);
             }
 
             

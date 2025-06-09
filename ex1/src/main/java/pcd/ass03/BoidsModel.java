@@ -1,5 +1,6 @@
 package pcd.ass03;
 
+import pcd.ass03.model.BoidState;
 import pcd.ass03.utils.P2d;
 import pcd.ass03.utils.V2d;
 
@@ -8,7 +9,7 @@ import java.util.List;
 
 public class BoidsModel {
     
-    private final List<Boid> boids;
+    private final List<BoidState> boids;
     private double separationWeight; 
     private double alignmentWeight; 
     private double cohesionWeight; 
@@ -40,12 +41,12 @@ public class BoidsModel {
         for (int i = 0; i < nboids; i++) {
         	P2d pos = new P2d(-width/2 + Math.random() * width, -height/2 + Math.random() * height);
         	V2d vel = new V2d(Math.random() * maxSpeed/2 - maxSpeed/4, Math.random() * maxSpeed/2 - maxSpeed/4);
-        	boids.add(new Boid(pos, vel));
+        	boids.add(new BoidState(pos, vel));
         }
 
     }
     
-    public synchronized List<Boid> getBoids(){
+    public synchronized List<BoidState> getBoids(){
     	return boids;
     }
     
