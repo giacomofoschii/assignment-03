@@ -6,6 +6,10 @@ import pcd.ass03.utils.P2d;
 
 import java.util.List;
 
+/**
+ * Protocol for neighbor-related commands in the boids simulation.
+ * This protocol defines commands for retrieving neighbors and updating boid positions.
+ */
 public interface NeighborProtocol {
 
     interface Command {}

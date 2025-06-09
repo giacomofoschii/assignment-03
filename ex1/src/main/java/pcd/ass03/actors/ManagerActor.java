@@ -67,7 +67,8 @@ public class ManagerActor {
         }
 
         // Create GUIActor
-        ActorRef<GUIProtocol.Command> guiActor = context.spawn(
+        //TODO: Uncomment if you need
+        /*ActorRef<GUIProtocol.Command> guiActor =*/ context.spawn(
                 GUIActor.create(params, this.currentStates, this.context.getSelf()),
                 "gui-actor"
         );

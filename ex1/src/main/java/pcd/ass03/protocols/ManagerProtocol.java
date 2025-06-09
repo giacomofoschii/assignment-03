@@ -5,6 +5,7 @@ import pcd.ass03.utils.V2d;
 
 /**
  * Protocol for Manager actor that control simulation.
+ * This protocol defines the commands that can be sent to the Manager actor
  */
 public interface ManagerProtocol {
 

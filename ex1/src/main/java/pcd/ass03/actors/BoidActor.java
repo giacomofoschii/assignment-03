@@ -44,13 +44,13 @@ public class BoidActor {
             .onMessage(BoidProtocol.UpdateRequest.class, this::onUpdateRequest)
             .onMessage(BoidProtocol.NeighborsInfo.class, this::onNeighborsInfo)
             .build();
-    };
+    }
 
     private Behavior<BoidProtocol.Command> onUpdateRequest(BoidProtocol.UpdateRequest request) {
         context.ask(BoidProtocol.NeighborsInfo.class, neighborManager, Duration.ofMillis(100),
                 replyTo -> new NeighborProtocol.GetNeighbors(boidId, request.boids(),
                                                                             params.getPerceptionRadius(), replyTo),
-                (response, throwable) -> {;
+                (response, throwable) -> {
                     if (response != null) {
                         return response;
                     } else {
