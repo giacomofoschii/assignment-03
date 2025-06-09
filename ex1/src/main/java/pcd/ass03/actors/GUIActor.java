@@ -1,8 +1,10 @@
 package pcd.ass03.actors;
 
+import akka.actor.typed.ActorRef;
 import akka.actor.typed.Behavior;
 import akka.actor.typed.javadsl.*;
 import pcd.ass03.model.BoidState;
+import pcd.ass03.protocols.ManagerProtocol;
 import pcd.ass03.view.BoidsPanel;
 import pcd.ass03.protocols.GUIProtocol;
 
@@ -18,9 +20,12 @@ public class GUIActor implements ChangeListener {
     private final BoidsPanel boidsPanel;
     private final JSlider cohesionSlider, separationSlider, alignmentSlider;
     private final BoidsParams boidsParams;
+    private final ActorRef<ManagerProtocol.Command> managerActor;
 
-    private GUIActor(BoidsParams boidsParams, double width, double height, Map<String, BoidState> boids) {
+    private GUIActor(BoidsParams boidsParams, double width, double height, Map<String, BoidState> boids,
+                     ActorRef<ManagerProtocol.Command> managerActor) {
         this.boidsParams = boidsParams;
+        this.managerActor = managerActor;
         int width1 = (int) Math.round(width);
         int height1 = (int) Math.round(height);
 
@@ -50,8 +55,10 @@ public class GUIActor implements ChangeListener {
         frame.setVisible(true);
     }
 
-    public static Behavior<GUIProtocol.Command> create(BoidsParams boidsParams, double width, double height, Map<String, BoidState> boids) {
-        return Behaviors.setup(ctx -> new GUIActor(boidsParams, width, height, boids).behavior());
+    public static Behavior<GUIProtocol.Command> create(BoidsParams boidsParams, double width, double height,
+                                                       Map<String, BoidState> boids,
+                                                       ActorRef<ManagerProtocol.Command> managerActor) {
+        return Behaviors.setup(ctx -> new GUIActor(boidsParams, width, height, boids, managerActor).behavior());
     }
 
     private Behavior<GUIProtocol.Command> behavior() {
@@ -96,6 +103,6 @@ public class GUIActor implements ChangeListener {
         double sep = separationSlider.getValue() * 0.1;
         double coh = cohesionSlider.getValue() * 0.1;
         double ali = alignmentSlider.getValue() * 0.1;
-        this.onUpdateWeights(new GUIProtocol.UpdateWeights(sep, coh, ali));
+        managerActor.tell(new ManagerProtocol.UpdateParams(coh, ali, sep));
     }
 }
