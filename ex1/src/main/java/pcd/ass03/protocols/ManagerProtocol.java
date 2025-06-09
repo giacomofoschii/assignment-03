@@ -12,23 +12,44 @@ public interface ManagerProtocol {
 
     /**
      * Start the simulation.
+     *
+     * @param nBoids the number of boids to simulate
+     * @param width the width of the simulation area
+     * @param height the height of the simulation area
      */
-    record startSimulation(int nBoids,
+    record StartSimulation(int nBoids,
                            double width,
                            double height) implements Command {}
 
     /**
      * Stop the simulation.
      */
-    record stopSimulation() implements Command {}
+    record StopSimulation() implements Command {}
 
-    record tick() implements Command {}
+    /**
+     * Tick command to update the simulation state.
+     */
+    record Tick() implements Command {}
 
-    record boidUpdated(P2d position,
+    /**
+     * Command to update the position and velocity of a boid.
+     *
+     * @param position the new position of the boid
+     * @param velocity the new velocity of the boid
+     * @param boidId the unique identifier of the boid
+     */
+    record BoidUpdated(P2d position,
                        V2d velocity,
                        String boidId) implements Command {}
 
-    record updateParams(double cohesion,
+    /**
+     * Command to update the parameters of the simulation, setted by user from GUI.
+     *
+     * @param cohesion cohesion factor
+     * @param alignment alignment factor
+     * @param separation separation factor
+     */
+    record UpdateParams(double cohesion,
                         double alignment,
                         double separation) implements Command {}
 }
