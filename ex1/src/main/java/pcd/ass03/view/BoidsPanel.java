@@ -1,17 +1,19 @@
-package pcd.ass03;
+package pcd.ass03.view;
 
 import javax.swing.*;
 import java.awt.*;
 
 public class BoidsPanel extends JPanel {
 
-	private BoidsView view; 
-	private BoidsModel model;
+	private final int width, height, nBoids;
     private int framerate;
+    private final List<BoidState> boids;
 
-    public BoidsPanel(BoidsView view, BoidsModel model) {
-    	this.model = model;
-    	this.view = view;
+    public BoidsPanel(int width, int height, int nBoids, List<BoidState> boids) {
+    	this.width = width;
+        this.height = height;
+        this.nBoids = nBoids;
+        this.boids = boids;
     }
 
     public void setFrameRate(int framerate) {
@@ -23,11 +25,11 @@ public class BoidsPanel extends JPanel {
         super.paintComponent(g);
         setBackground(Color.WHITE);
         
-        var w = view.getWidth();
-        var h = view.getHeight();
-        var envWidth = model.getWidth();
+        var w = GUIActor.SCREEN_WIDTH;
+        var h = GUIActor.SCREEN_HEIGHT;
+        var envWidth = this.width;
         var xScale = w/envWidth;
-        // var envHeight = model.getHeight();
+        // var envHeight = this.height;
         // var yScale = h/envHeight;
 
         var boids = model.getBoids();

@@ -2,7 +2,6 @@ package pcd.ass03.actors;
 
 import akka.actor.typed.*;
 import akka.actor.typed.javadsl.*;
-import pcd.ass03.BoidsView;
 import pcd.ass03.model.BoidState;
 import pcd.ass03.protocols.*;
 import pcd.ass03.utils.*;
@@ -16,20 +15,17 @@ public class ManagerActor {
     private final TimerScheduler<ManagerProtocol.Command> timers;
     private final Map<String, BoidState> currentStates = new HashMap<>();
     private final Map<String, ActorRef<BoidProtocol.Command>> boidActors = new HashMap<>();
-    private final BoidsView view;
 
     private ManagerActor(ActorContext<ManagerProtocol.Command> context,
-                         TimerScheduler<ManagerProtocol.Command> timers,
-                         BoidsView view) {
+                         TimerScheduler<ManagerProtocol.Command> timers) {
         this.context = context;
         this.timers = timers;
-        this.view = view;
     }
 
-    public static Behavior<ManagerProtocol.Command> create(BoidsView view) {
+    public static Behavior<ManagerProtocol.Command> create() {
         return Behaviors.setup(context ->
             Behaviors.withTimers(timers ->
-                new ManagerActor(context, timers , view).idle()
+                new ManagerActor(context, timers ).idle()
             )
         );
     }
