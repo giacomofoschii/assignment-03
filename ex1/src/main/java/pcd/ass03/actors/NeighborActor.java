@@ -26,21 +26,23 @@ public class NeighborActor {
     private Behavior<NeighborProtocol.Command> onGetNeighbors(NeighborProtocol.GetNeighbors command) {
         // Logic to find neighbors within the specified radius
         List<BoidState> neighbors = new ArrayList<>();
-        P2d position = positions.get(command.boidId());
-        List<BoidState> boids = command.allBoids();
-        if (position != null) {
-            for (BoidState other : boids) {
-                if (!Objects.equals(other.id(), command.boidId())) {
-                    P2d otherPos = other.pos();
-                    double distance = position.distance(otherPos);
+        BoidState requestingBoid = command.allBoids().stream()
+                .filter(b -> b.id().equals(command.boidId()))
+                .findFirst()
+                .orElse(null);
+        if (requestingBoid != null) {
+            P2d position = requestingBoid.pos();
+            for (BoidState other : command.allBoids()) {
+                if (!other.id().equals(command.boidId())) {
+                    double distance = position.distance(other.pos());
                     if (distance < command.radius()) {
                         neighbors.add(other);
                     }
                 }
             }
-            // For now, just reply with an empty list
-            command.replyTo().tell(new BoidProtocol.NeighborsInfo(command.boidId(), neighbors));
         }
+
+        command.replyTo().tell(new BoidProtocol.NeighborsInfo(command.boidId(), neighbors));
         return Behaviors.same();
     }
 
