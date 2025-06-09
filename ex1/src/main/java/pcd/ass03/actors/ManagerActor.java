@@ -64,7 +64,7 @@ public class ManagerActor {
             P2d initialPos = new P2d(-width / 2 * Math.random() * width,
                     -height / 2 * height);
             ActorRef<BoidProtocol.Command> boidRef = context.spawn(
-                    BoidActor.create(id, initialPos, context.getSelf(), neighborManager, params),
+                    BoidActor.create(id, initialPos, neighborManager, params),
                     id
             );
 
@@ -82,6 +82,4 @@ public class ManagerActor {
     private Behavior<ManagerProtocol.Command> running() {
         return null;
     }
-
-
 }

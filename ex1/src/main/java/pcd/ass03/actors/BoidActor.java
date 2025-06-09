@@ -12,7 +12,6 @@ import java.util.List;
 public class BoidActor {
     private final ActorContext<BoidProtocol.Command> context;
     private final String boidId;
-    private final ActorRef<ManagerProtocol.Command> manager;
     private final ActorRef<NeighborProtocol.Command> neighborManager;
 
     private P2d position;
@@ -20,23 +19,20 @@ public class BoidActor {
     private final BoidsParams params;
 
     public BoidActor(ActorContext<BoidProtocol.Command> context, String boidId, P2d initialPos,
-                     ActorRef<ManagerProtocol.Command> manager, ActorRef<NeighborProtocol.Command> neighborManager,
-                     BoidsParams params) {
+                     ActorRef<NeighborProtocol.Command> neighborManager, BoidsParams params) {
         this.context = context;
         this.boidId = boidId;
         this.position = initialPos;
-        this.manager = manager;
         this.neighborManager = neighborManager;
         this.params = params;
     }
 
     public static Behavior<BoidProtocol.Command> create(String boidId, P2d initialPos,
-                                                        ActorRef<ManagerProtocol.Command> manager,
                                                         ActorRef<NeighborProtocol.Command> neighborManager,
                                                         BoidsParams params) {
         // Implementation of the BoidActor behavior goes here
         return Behaviors.setup(context -> new BoidActor(context, boidId, initialPos,
-                manager, neighborManager, params).behavior());
+                neighborManager, params).behavior());
     }
 
     private Behavior<BoidProtocol.Command> behavior() {
