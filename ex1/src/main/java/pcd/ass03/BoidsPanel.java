@@ -1,7 +1,5 @@
 package pcd.ass03;
 
-import pcd.ass03.model.BoidState;
-
 import javax.swing.*;
 import java.awt.*;
 
@@ -35,7 +33,7 @@ public class BoidsPanel extends JPanel {
         var boids = model.getBoids();
 
         g.setColor(Color.BLUE);
-        for (BoidState boid : boids) {
+        for (Boid boid : boids) {
         	var x = boid.getPos().x();
         	var y = boid.getPos().y();
         	int px = (int)(w/2 + x*xScale);
