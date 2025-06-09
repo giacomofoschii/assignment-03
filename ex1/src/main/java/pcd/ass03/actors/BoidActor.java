@@ -7,24 +7,24 @@ import pcd.ass03.utils.*;
 
 public class BoidActor {
 
-    public BoidActor(ActorContext<BoidProtocol.Command> context, String boidId,
-                     ActorRef<ManagerProtocol.Command> manager) {
-        this.context = context;
-        this.boidId = boidId;
-        this.manager = manager;
-    }
-
-    public static Behavior<BoidProtocol.Command> create(String boidId, ActorRef<ManagerProtocol.Command> manager) {
-        // Implementation of the BoidActor behavior goes here
-        return Behaviors.setup(context -> new BoidActor(context, boidId, manager).behavior());
-    }
-
     private final ActorContext<BoidProtocol.Command> context;
     private final String boidId;
     private final ActorRef<ManagerProtocol.Command> manager;
 
     private P2d position;
     private V2d velocity;
+
+    public BoidActor(ActorContext<BoidProtocol.Command> context, String boidId, P2d initialPos, ActorRef<ManagerProtocol.Command> manager) {
+        this.context = context;
+        this.boidId = boidId;
+        this.position = initialPos;
+        this.manager = manager;
+    }
+
+    public static Behavior<BoidProtocol.Command> create(String boidId, P2d initialPos, ActorRef<ManagerProtocol.Command> manager) {
+        // Implementation of the BoidActor behavior goes here
+        return Behaviors.setup(context -> new BoidActor(context, boidId, initialPos, manager).behavior());
+    }
 
     private Behavior<BoidProtocol.Command> behavior() {
         return Behaviors.receive(BoidProtocol.Command.class)

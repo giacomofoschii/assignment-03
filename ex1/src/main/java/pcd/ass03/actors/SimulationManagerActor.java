@@ -2,6 +2,7 @@ package pcd.ass03.actors;
 
 import akka.actor.typed.*;
 import akka.actor.typed.javadsl.*;
+import pcd.ass03.BoidsView;
 import pcd.ass03.model.BoidState;
 import pcd.ass03.protocols.*;
 import pcd.ass03.utils.*;
@@ -14,20 +15,21 @@ public class SimulationManagerActor {
     private final ActorContext<ManagerProtocol.Command> context;
     private final TimerScheduler<ManagerProtocol.Command> timers;
     private final Map<String, BoidState> currentStates = new HashMap<>();
-    private final Map<String, ActorRef<BoidProtocol.Command> boidActors = new HashMap<>();
-    private ActorRef<NeighborProtocol.Command> neighborhoodManager;
-    private ActorRef<GUIProtocol.Command> guiActor;
+    private final Map<String, ActorRef<BoidProtocol.Command>> boidActors = new HashMap<>();
+    private final BoidsView view;
 
     private SimulationManagerActor(ActorContext<ManagerProtocol.Command> context,
-                                   TimerScheduler<ManagerProtocol.Command> timers) {
+                                   TimerScheduler<ManagerProtocol.Command> timers,
+                                   BoidsView view) {
         this.context = context;
         this.timers = timers;
+        this.view = view;
     }
 
-    public static Behavior<ManagerProtocol.Command> create() {
+    public static Behavior<ManagerProtocol.Command> create(BoidsView view) {
         return Behaviors.setup(context ->
             Behaviors.withTimers(timers ->
-                new SimulationManagerActor(context, timers).idle()
+                new SimulationManagerActor(context, timers, view).idle()
             )
         );
     }
@@ -39,23 +41,27 @@ public class SimulationManagerActor {
     }
 
     private Behavior<ManagerProtocol.Command> onStart(ManagerProtocol.StartSimulation cmd) {
+        int nBoids = cmd.nBoids();
+        double width = cmd.width();
+        double height = cmd.height();
+
         // Create NeighborhoodManager
-        this.neighborhoodManager = context.spawn(
-            NeighborActor.create(cmd.width(), cmd.height()),
-            "neighborhood-manager"
+        ActorRef<NeighborProtocol.Command> neighborhoodManager = context.spawn(
+                NeighborActor.create(),
+                "neighborhood-manager"
         );
 
         // Create GUIActor
-        this.guiActor = context.spawn(
-            GUIActor.create(),
-            "gui-actor"
+        ActorRef<GUIProtocol.Command> guiActor = context.spawn(
+                GUIActor.create(this.view),
+                "gui-actor"
         );
 
         // Create Boid actors
-        for (int i = 0; i < cmd.nBoids(); i++) {
+        for (int i = 0; i < nBoids; i++) {
             String id = "boid-" + i;
-            P2d initialPos = new P2d(-cmd.width() / 2 * Math.random() * cmd.width(),
-                    -cmd.height() / 2 * cmd.height());
+            P2d initialPos = new P2d(-width / 2 * Math.random() * width,
+                    -height / 2 * height);
             ActorRef<BoidProtocol.Command> boidRef = context.spawn(
                     BoidActor.create(id, initialPos, context.getSelf()),
                     id
@@ -71,6 +77,7 @@ public class SimulationManagerActor {
         return running();
     }
 
+    //TODO: Implement the running behavior
     private Behavior<ManagerProtocol.Command> running() {
         return null;
     }
