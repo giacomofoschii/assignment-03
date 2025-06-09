@@ -26,6 +26,18 @@ public interface ManagerProtocol {
     record StopSimulation() implements Command {}
 
     /**
+     * Pause the simulation.
+     * This command is used to pause the simulation without stopping it completely.
+     * It allows the simulation to be resumed later.
+     */
+    record PauseSimulation() implements Command {}
+
+    /**
+     * Resume the simulation.
+     */
+    record ResumeSimulation() implements Command {}
+
+    /**
      * Tick command to update the simulation state.
      */
     record Tick() implements Command {}
