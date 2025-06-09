@@ -5,12 +5,14 @@ import pcd.ass03.model.BoidState;
 
 import javax.swing.*;
 import java.awt.*;
+import java.util.ArrayList;
 import java.util.List;
 
 public class BoidsPanel extends JPanel {
 
 	private int framerate;
-    private final int envWidth, envHeight, nBoids;
+    private int nBoids;
+    private final int envWidth, envHeight;
     private List<BoidState> boids;
 
     public BoidsPanel(int envWidth, int envHeight, int nBoids, List<BoidState> boids) {
@@ -20,8 +22,12 @@ public class BoidsPanel extends JPanel {
         this.boids = boids;
     }
 
+    public void setNBoids(int nBoids) {
+        this.nBoids = nBoids;
+    }
+
     public void updateBoids(List<BoidState> newBoids) {
-        this.boids = newBoids;
+        this.boids = new ArrayList<>(newBoids);
     }
 
     public void setFrameRate(int framerate) {

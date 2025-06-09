@@ -7,6 +7,7 @@ import pcd.ass03.model.BoidState;
 import pcd.ass03.protocols.ManagerProtocol;
 import pcd.ass03.view.BoidsPanel;
 import pcd.ass03.protocols.GUIProtocol;
+import pcd.ass03.view.InitialDialog;
 
 import javax.swing.*;
 import javax.swing.event.*;
@@ -17,42 +18,123 @@ import java.util.Hashtable;
 public class GUIActor implements ChangeListener {
     public static final int SCREEN_WIDTH = 800, SCREEN_HEIGHT = 800;
 
-    private final BoidsPanel boidsPanel;
-    private final JSlider cohesionSlider, separationSlider, alignmentSlider;
-    private final BoidsParams boidsParams;
     private final ActorRef<ManagerProtocol.Command> managerActor;
+    private final BoidsParams boidsParams;
 
-    private GUIActor(BoidsParams boidsParams, Map<String, BoidState> boids,
+    private JFrame frame;
+    private BoidsPanel boidsPanel;
+    private JSlider cohesionSlider, separationSlider, alignmentSlider;
+    private JButton startButton, pauseButton, stopButton;
+    private JLabel statusLabel;
+    private boolean isPaused = false;
+    private boolean isRunning = false;
+
+    private GUIActor(BoidsParams boidsParams,
+                     Map<String, BoidState> boids,
                      ActorRef<ManagerProtocol.Command> managerActor) {
         this.boidsParams = boidsParams;
         this.managerActor = managerActor;
+
+        SwingUtilities.invokeLater(this::showInitialDialog);
+    }
+
+    private void showInitialDialog() {
+        // Create temporary frame for dialog parent
+        JFrame tempFrame = new JFrame();
+        tempFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+        InitialDialog dialog = new InitialDialog(tempFrame);
+        if (dialog.showDialog()) {
+            int nBoids = dialog.getNBoids();
+            tempFrame.dispose();
+
+            // Create main GUI
+            createMainGUI(nBoids);
+
+            // Tell manager to start simulation
+            managerActor.tell(new ManagerProtocol.StartSimulation(
+                    nBoids,
+                    boidsParams.getWidth(),
+                    boidsParams.getHeight()
+            ));
+
+            isRunning = true;
+            statusLabel.setText("Status: Running");
+        } else {
+            System.exit(0);
+        }
+    }
+
+    private void createMainGUI(int nBoids) {
         final int envWidth = (int) Math.round(boidsParams.getWidth());
         final int envHeight = (int) Math.round(boidsParams.getHeight());
 
-        // Initialize the GUI components
-        JFrame frame = new JFrame("Boids Simulation");
+        frame = new JFrame("Boids Simulation");
         frame.setSize(SCREEN_WIDTH, SCREEN_HEIGHT);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
-        JPanel cp = new JPanel(new BorderLayout());
-        this.boidsPanel = new BoidsPanel(envWidth, envHeight, boids.size(), boids.values().stream().toList());
-        cp.add(BorderLayout.CENTER, boidsPanel);
+        JPanel mainPanel = new JPanel(new BorderLayout());
 
-        JPanel slidersPanel = new JPanel(new GridLayout(3, 1));
+        // Boids panel
+        this.boidsPanel = new BoidsPanel(envWidth, envHeight, nBoids, new ArrayList<>());
+        mainPanel.add(BorderLayout.CENTER, boidsPanel);
+
+        JPanel cpTop = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
+        cpTop.setBorder(BorderFactory.createTitledBorder("Simulation Controls"));
+
+        startButton = new JButton("Restart");
+        pauseButton = new JButton("Pause");
+        stopButton = new JButton("Stop");
+        statusLabel = new JLabel("Status: Starting...");
+        statusLabel.setFont(new Font("Arial", Font.BOLD, 12));
+
+        // Add action listeners
+        startButton.addActionListener(e -> onRestart());
+        pauseButton.addActionListener(e -> onPauseResume());
+        stopButton.addActionListener(e -> onStop());
+
+        cpTop.add(startButton);
+        cpTop.add(pauseButton);
+        cpTop.add(stopButton);
+        cpTop.add(Box.createHorizontalStrut(20));
+        cpTop.add(statusLabel);
+
+        // Sliders panel at bottom
+        JPanel bottomPanel = new JPanel(new BorderLayout());
+        JPanel slidersPanel = new JPanel(new GridLayout(3, 2, 5, 5));
+        slidersPanel.setBorder(BorderFactory.createTitledBorder("Parameters"));
+
         this.cohesionSlider = makeSlider();
         this.separationSlider = makeSlider();
         this.alignmentSlider = makeSlider();
 
-        slidersPanel.add(new JLabel("Cohesion"));
+        slidersPanel.add(new JLabel("  Cohesion:"));
         slidersPanel.add(cohesionSlider);
-        slidersPanel.add(new JLabel("Separation"));
+        slidersPanel.add(new JLabel("  Separation:"));
         slidersPanel.add(separationSlider);
-        slidersPanel.add(new JLabel("Alignment"));
+        slidersPanel.add(new JLabel("  Alignment:"));
         slidersPanel.add(alignmentSlider);
 
-        cp.add(BorderLayout.SOUTH, slidersPanel);
-        frame.setContentPane(cp);
+        bottomPanel.add(cpTop, BorderLayout.NORTH);
+        bottomPanel.add(slidersPanel, BorderLayout.CENTER);
+
+        mainPanel.add(BorderLayout.SOUTH, bottomPanel);
+
+        frame.setContentPane(mainPanel);
+        frame.setLocationRelativeTo(null);
         frame.setVisible(true);
+    }
+
+    // TODO: Implement the actions for buttons
+    private void onStop() {
+    }
+
+    // TODO: Implement the actions for buttons
+    private void onPauseResume() {
+    }
+
+    // TODO: Implement the actions for buttons
+    private void onRestart() {
     }
 
     public static Behavior<GUIProtocol.Command> create(BoidsParams boidsParams, Map<String, BoidState> boids,
@@ -69,6 +151,7 @@ public class GUIActor implements ChangeListener {
 
     private Behavior<GUIProtocol.Command> onRenderFrame(GUIProtocol.RenderFrame msg) {
         SwingUtilities.invokeLater(() -> {
+            this.boidsPanel.updateBoids(msg.boids());
             this.boidsPanel.setFrameRate(msg.metrics().fps());
             this.boidsPanel.repaint();
         });
@@ -84,14 +167,12 @@ public class GUIActor implements ChangeListener {
 
     private JSlider makeSlider() {
         var slider = new JSlider(JSlider.HORIZONTAL, 0, 20, 10);
-        slider.setMajorTickSpacing(10);
+        slider.setMajorTickSpacing(100);
         slider.setMinorTickSpacing(1);
         slider.setPaintTicks(true);
         slider.setPaintLabels(true);
+
         Hashtable<Integer, JLabel> labelTable = new Hashtable<>();
-        labelTable.put(0, new JLabel("0"));
-        labelTable.put(1, new JLabel("1"));
-        labelTable.put(2, new JLabel("2"));
         slider.setLabelTable(labelTable);
         slider.addChangeListener(this);
         return slider;
