@@ -43,6 +43,14 @@ public interface ManagerProtocol {
     record Tick() implements Command {}
 
     /**
+     * Command to notify that the update for the current tick is completed.
+     * This command is sent to the Manager actor when all boids have completed their updates for the current tick.
+     *
+     * @param tick the current tick of the simulation
+     */
+    record UpdateCompleted(long tick) implements Command {}
+
+    /**
      * Command to update the position and velocity of a boid.
      *
      * @param position the new position of the boid

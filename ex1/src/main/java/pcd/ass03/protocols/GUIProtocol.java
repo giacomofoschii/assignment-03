@@ -34,4 +34,9 @@ public interface GUIProtocol {
                          double alignmentWeight,
                          double cohesionWeight) implements Command {}
 
+    /**
+     * Command to show the initial dialog again after stopping te simulation.
+     */
+    record ShowInitialDialog() implements Command {}
+
 }

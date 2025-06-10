@@ -15,11 +15,13 @@ public class ManagerActor {
     private static final int TICK_NUMBER = 40;
 
     private final ActorContext<ManagerProtocol.Command> context;
+    private ActorRef<BarrierProtocol.Command> barrierManager;
     private ActorRef<GUIProtocol.Command> guiActor;
     private final TimerScheduler<ManagerProtocol.Command> timers;
     private final Map<String, BoidState> currentStates = new HashMap<>();
     private final Map<String, ActorRef<BoidProtocol.Command>> boidActors = new HashMap<>();
-    private BoidsParams boidsParams;
+    private final BoidsParams boidsParams;
+    private long currentTick = 0;
 
     private ManagerActor(ActorContext<ManagerProtocol.Command> context,
                          TimerScheduler<ManagerProtocol.Command> timers) {
@@ -50,27 +52,37 @@ public class ManagerActor {
     }
 
     private Behavior<ManagerProtocol.Command> onStart(ManagerProtocol.StartSimulation cmd) {
+        this.currentStates.clear();
+        for (ActorRef<BoidProtocol.Command> actor : boidActors.values()) {
+            this.context.stop(actor);
+        }
+        this.boidActors.clear();
+        if(this.barrierManager != null) {
+            this.context.stop(this.barrierManager);
+        }
+
         int nBoids = cmd.nBoids();
         double width = cmd.width();
         double height = cmd.height();
 
-        // Create NeighborhoodManager
-        ActorRef<NeighborProtocol.Command> neighborManager = context.spawn(
-                NeighborActor.create(),
-                "neighbor-manager"
+        barrierManager = context.spawn(
+                BarrierActor.create(nBoids, this.context.getSelf()),
+                "barrier-actor"
         );
 
         // Create Boid actors
         for (int i = 0; i < nBoids; i++) {
             String id = "boid-" + i;
-            P2d initialPos = new P2d(Math.random() * width, Math.random() * height);
+            P2d initialPos = new P2d(
+                    (Math.random() - 0.5) * width,
+                    (Math.random() - 0.5) * height);
             V2d initialVel = new V2d(
                     (Math.random() - 0.5) * 2,
                     (Math.random() - 0.5) * 2
             );
             ActorRef<BoidProtocol.Command> boidRef = context.spawn(
-                    BoidActor.create(id, initialPos, neighborManager, boidsParams, this.context.getSelf()),
-                    id
+                    BoidActor.create(id, initialPos, boidsParams, this.context.getSelf(), barrierManager),
+                    id + "-" + System.currentTimeMillis()
             );
 
             this.boidActors.put(id, boidRef);
@@ -89,6 +101,7 @@ public class ManagerActor {
     private Behavior<ManagerProtocol.Command> running() {
         return Behaviors.receive(ManagerProtocol.Command.class)
                 .onMessage(ManagerProtocol.Tick.class, this::onTick)
+                .onMessage(ManagerProtocol.UpdateCompleted.class, this::onUpdateCompleted)
                 .onMessage(ManagerProtocol.BoidUpdated.class, this::onBoidUpdated)
                 .onMessage(ManagerProtocol.UpdateParams.class, this::onUpdateParams)
                 .onMessage(ManagerProtocol.PauseSimulation.class, this::onPause)
@@ -111,7 +124,30 @@ public class ManagerActor {
 
     private Behavior<ManagerProtocol.Command> onStop(ManagerProtocol.StopSimulation stopSimulation) {
         timers.cancelAll();
+
+        for (ActorRef<BoidProtocol.Command> actor : boidActors.values()) {
+            this.context.stop(actor);
+        }
+        this.boidActors.clear();
+        this.currentStates.clear();
+
+        if(this.barrierManager != null) {
+            this.context.stop(this.barrierManager);
+            this.barrierManager = null;
+        }
+
+        guiActor.tell(new GUIProtocol.ShowInitialDialog());
+
         return Behaviors.stopped();
+    }
+
+    private Behavior<ManagerProtocol.Command> onUpdateCompleted(ManagerProtocol.UpdateCompleted cmd) {
+        guiActor.tell(new GUIProtocol.RenderFrame(
+                currentStates.values().stream().toList(),
+                new SimulationMetrics(boidActors.size(), FPS, System.currentTimeMillis() - cmd.tick())
+        ));
+
+        return Behaviors.same();
     }
 
     private Behavior<ManagerProtocol.Command> onBoidUpdated(ManagerProtocol.BoidUpdated boidUpdated) {
@@ -122,13 +158,14 @@ public class ManagerActor {
     }
 
     private Behavior<ManagerProtocol.Command> onTick(ManagerProtocol.Tick tick) {
+        currentTick++;
+
+        barrierManager.tell(new BarrierProtocol.StartPhase(currentTick));
+
         List<BoidState> states = new ArrayList<>(currentStates.values());
         for(ActorRef<BoidProtocol.Command> boidActor : boidActors.values()) {
-            boidActor.tell(new BoidProtocol.UpdateRequest(System.currentTimeMillis(), states));
+            boidActor.tell(new BoidProtocol.UpdateRequest(currentTick, states));
         }
-
-        guiActor.tell(new GUIProtocol.RenderFrame(states,
-                new SimulationMetrics(boidActors.size(), FPS, System.currentTimeMillis())));
 
         return Behaviors.same();
     }

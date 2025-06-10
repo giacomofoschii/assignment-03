@@ -1,0 +1,51 @@
+package pcd.ass03.actors;
+
+import akka.actor.typed.*;
+import akka.actor.typed.javadsl.*;
+import pcd.ass03.protocols.*;
+
+import java.util.*;
+
+public class BarrierActor {
+    private final int nBoids;
+    private final ActorContext<BarrierProtocol.Command> context;
+    private final ActorRef<ManagerProtocol.Command> manager;
+
+    private final Set<String> completedBoids = new HashSet<>();
+    private long currentTick = 0;
+
+    public BarrierActor(ActorContext<BarrierProtocol.Command> context,
+                        int nBoids,
+                        ActorRef<ManagerProtocol.Command> manager) {
+        this.nBoids = nBoids;
+        this.manager = manager;
+        this.context = context;
+    }
+
+    public static Behavior<BarrierProtocol.Command> create(int nBoids, ActorRef<ManagerProtocol.Command> manager) {
+        return Behaviors.setup(context -> new BarrierActor(context, nBoids, manager).behavior());
+    }
+
+    private Behavior<BarrierProtocol.Command> behavior() {
+        return Behaviors.receive(BarrierProtocol.Command.class)
+                .onMessage(BarrierProtocol.StartPhase.class, this::onStartPhase)
+                .onMessage(BarrierProtocol.BoidCompleted.class, this::onBoidCompleted)
+                .build();
+    }
+
+    private Behavior<BarrierProtocol.Command> onStartPhase(BarrierProtocol.StartPhase cmd) {
+        completedBoids.clear();
+        currentTick = cmd.tick();
+        return Behaviors.same();
+    }
+
+    private Behavior<BarrierProtocol.Command> onBoidCompleted(BarrierProtocol.BoidCompleted cmd) {
+        completedBoids.add(cmd.boidId());
+
+        if(completedBoids.size() >= nBoids) {
+            manager.tell(new ManagerProtocol.UpdateCompleted(currentTick));
+            completedBoids.clear();
+        }
+        return Behaviors.same();
+    }
+}

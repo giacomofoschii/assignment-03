@@ -33,7 +33,6 @@ public class GUIActor implements ChangeListener {
     }
 
     private void showInitialDialog() {
-        // Create temporary frame for dialog parent
         JFrame parentFrame = (frame != null) ? frame : new JFrame();
         if (frame == null) {
             parentFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -53,7 +52,6 @@ public class GUIActor implements ChangeListener {
             } else {
                 updateGUIForRestart(nBoids);
             }
-
 
             // Tell the manager to start simulation
             managerActor.tell(new ManagerProtocol.StartSimulation(
@@ -87,12 +85,18 @@ public class GUIActor implements ChangeListener {
         this.boidsPanel = new BoidsPanel(envWidth, envHeight, nBoids, new ArrayList<>());
         mainPanel.add(BorderLayout.CENTER, boidsPanel);
 
-        JPanel cpTop = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
+        JPanel cpTop = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 5));
+        cpTop.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
         cpTop.setBorder(BorderFactory.createTitledBorder("Simulation Controls"));
 
+        Dimension buttonSize = new Dimension(85, 25);
         resumeButton = new JButton("Resume");
+        resumeButton.setPreferredSize(buttonSize);
         pauseButton = new JButton("Pause");
+        pauseButton.setPreferredSize(buttonSize);
         stopButton = new JButton("Stop");
+        stopButton.setPreferredSize(buttonSize);
+
         statusLabel = new JLabel("Status: Starting...");
         statusLabel.setFont(new Font("Arial", Font.BOLD, 12));
 
@@ -104,17 +108,22 @@ public class GUIActor implements ChangeListener {
         cpTop.add(resumeButton);
         cpTop.add(pauseButton);
         cpTop.add(stopButton);
-        cpTop.add(Box.createHorizontalStrut(20));
+        cpTop.add(Box.createHorizontalStrut(10));
         cpTop.add(statusLabel);
 
+        mainPanel.add(BorderLayout.NORTH, cpTop);
+
         // Sliders panel at bottom
-        JPanel bottomPanel = new JPanel(new BorderLayout());
-        JPanel slidersPanel = new JPanel(new GridLayout(3, 2, 5, 5));
+        JPanel slidersPanel = new JPanel(new GridLayout(3, 2, 3, 3));
         slidersPanel.setBorder(BorderFactory.createTitledBorder("Parameters"));
 
-        this.cohesionSlider = makeSlider();
-        this.separationSlider = makeSlider();
-        this.alignmentSlider = makeSlider();
+        Dimension sliderSize = new Dimension(100, 30);
+        cohesionSlider = makeSlider();
+        cohesionSlider.setPreferredSize(sliderSize);
+        separationSlider = makeSlider();
+        separationSlider.setPreferredSize(sliderSize);
+        alignmentSlider = makeSlider();
+        alignmentSlider.setPreferredSize(sliderSize);
 
         slidersPanel.add(new JLabel("  Cohesion:"));
         slidersPanel.add(cohesionSlider);
@@ -123,8 +132,8 @@ public class GUIActor implements ChangeListener {
         slidersPanel.add(new JLabel("  Alignment:"));
         slidersPanel.add(alignmentSlider);
 
-        bottomPanel.add(cpTop, BorderLayout.NORTH);
-        bottomPanel.add(slidersPanel, BorderLayout.CENTER);
+        JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 5));
+        bottomPanel.add(slidersPanel);
 
         mainPanel.add(BorderLayout.SOUTH, bottomPanel);
 
@@ -165,6 +174,8 @@ public class GUIActor implements ChangeListener {
 
     private void onStop() {
         if (isRunning) {
+            isRunning = false;
+            isPaused = false;
             managerActor.tell(new ManagerProtocol.StopSimulation());
             updateButtonStates();
             statusLabel.setText("Status: Stopped");
@@ -195,6 +206,7 @@ public class GUIActor implements ChangeListener {
         return Behaviors.receive(GUIProtocol.Command.class)
             .onMessage(GUIProtocol.RenderFrame.class, this::onRenderFrame)
             .onMessage(GUIProtocol.UpdateWeights.class, this::onUpdateWeights)
+                .onMessage(GUIProtocol.ShowInitialDialog.class, this::onShowInitialDialog)
             .build();
     }
 
@@ -216,6 +228,11 @@ public class GUIActor implements ChangeListener {
         return Behaviors.same();
     }
 
+    private Behavior<GUIProtocol.Command> onShowInitialDialog(GUIProtocol.ShowInitialDialog msg) {
+        SwingUtilities.invokeLater(this::showInitialDialog);
+        return Behaviors.same();
+    }
+
     private JSlider makeSlider() {
         var slider = new JSlider(JSlider.HORIZONTAL, 0, 20, 10);
         slider.setMajorTickSpacing(100);
@@ -224,9 +241,8 @@ public class GUIActor implements ChangeListener {
         slider.setPaintLabels(true);
 
         Hashtable<Integer, JLabel> labelTable = new Hashtable<>();
-        labelTable.put(0, new JLabel("0.0"));
-        labelTable.put(10, new JLabel("1.0"));
-        labelTable.put(20, new JLabel("2.0"));
+        labelTable.put(0, new JLabel(("")));
+        labelTable.put(20, new JLabel(""));
         slider.setLabelTable(labelTable);
         
         slider.addChangeListener(this);

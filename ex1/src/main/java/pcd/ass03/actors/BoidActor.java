@@ -6,44 +6,39 @@ import pcd.ass03.model.BoidState;
 import pcd.ass03.protocols.*;
 import pcd.ass03.utils.*;
 
-import java.time.Duration;
 import java.util.List;
 
 public class BoidActor {
-    private final ActorContext<BoidProtocol.Command> context;
+    public static final int NEIGHBOR_TIMEOUT = 1000;
     private final String boidId;
-    private final ActorRef<NeighborProtocol.Command> neighborManager;
     private final ActorRef<ManagerProtocol.Command> managerActor;
+    private final ActorRef<BarrierProtocol.Command> barrierActor;
 
     private P2d position;
     private V2d velocity;
     private BoidsParams params;
 
-    public BoidActor(ActorContext<BoidProtocol.Command> context, String boidId, P2d initialPos,
-                     ActorRef<NeighborProtocol.Command> neighborManager, BoidsParams params,
-                     ActorRef<ManagerProtocol.Command> managerActor) {
-        this.context = context;
+    public BoidActor(ActorContext<BoidProtocol.Command> context, String boidId, P2d initialPos, BoidsParams params,
+                     ActorRef<ManagerProtocol.Command> managerActor, ActorRef<BarrierProtocol.Command> barrierActor) {
         this.boidId = boidId;
         this.position = initialPos;
         this.velocity = new V2d((Math.random() - 0.5) * 2, (Math.random() - 0.5 ) * 2);
-        this.neighborManager = neighborManager;
         this.params = params;
         this.managerActor = managerActor;
+        this.barrierActor = barrierActor;
     }
 
-    public static Behavior<BoidProtocol.Command> create(String boidId, P2d initialPos,
-                                                        ActorRef<NeighborProtocol.Command> neighborManager,
-                                                        BoidsParams params,
-                                                        ActorRef<ManagerProtocol.Command> managerActor) {
+    public static Behavior<BoidProtocol.Command> create(String boidId, P2d initialPos, BoidsParams params,
+                                                        ActorRef<ManagerProtocol.Command> managerActor,
+                                                        ActorRef<BarrierProtocol.Command> barrierActor) {
         // Implementation of the BoidActor behavior goes here
-        return Behaviors.setup(context -> new BoidActor(context, boidId, initialPos,
-                neighborManager, params, managerActor).behavior());
+        return Behaviors.setup(context -> new BoidActor(context, boidId, initialPos, params,
+                                                        managerActor, barrierActor).behavior());
     }
 
     private Behavior<BoidProtocol.Command> behavior() {
         return Behaviors.receive(BoidProtocol.Command.class)
             .onMessage(BoidProtocol.UpdateRequest.class, this::onUpdateRequest)
-            .onMessage(BoidProtocol.NeighborsInfo.class, this::onNeighborsInfo)
             .onMessage(BoidProtocol.UpdateParams.class, this::onUpdateParams)
             .build();
     }
@@ -54,24 +49,7 @@ public class BoidActor {
     }
 
     private Behavior<BoidProtocol.Command> onUpdateRequest(BoidProtocol.UpdateRequest request) {
-        context.ask(BoidProtocol.NeighborsInfo.class, neighborManager, Duration.ofMillis(100),
-                replyTo -> new NeighborProtocol.GetNeighbors(boidId, request.boids(),
-                                                                            params.getPerceptionRadius(), replyTo),
-                (response, throwable) -> {
-                    if (response != null) {
-                        return response;
-                    } else {
-                        // Handle the case where the response is null or an error occurred
-                        context.getLog().error("Failed to get neighbors for boid {}", boidId);
-                        return new BoidProtocol.NeighborsInfo(boidId, List.of());
-                    }
-                });
-
-        return Behaviors.same();
-    }
-
-    private Behavior<BoidProtocol.Command> onNeighborsInfo(BoidProtocol.NeighborsInfo info) {
-        List<BoidState> nearbyBoids = info.neighbors();
+        List<BoidState> nearbyBoids = findNearby(request.boids());
 
         V2d separation = calculateSeparation(nearbyBoids);
         V2d alignment = calculateAlignment(nearbyBoids);
@@ -98,8 +76,16 @@ public class BoidActor {
         if (position.y() >= params.getMaxY()) position = position.sum(new V2d(0, -params.getHeight()));
 
         managerActor.tell(new ManagerProtocol.BoidUpdated(position, velocity, boidId));
+        barrierActor.tell(new BarrierProtocol.BoidCompleted(boidId, request.tick()));
 
         return Behaviors.same();
+    }
+
+    private List<BoidState> findNearby(List<BoidState> boids) {
+        return boids.stream()
+                .filter(other -> !other.id().equals(boidId)
+                        && position.distance(other.pos()) <= params.getPerceptionRadius())
+                .toList();
     }
 
     private V2d calculateAlignment(List<BoidState> nearbyBoids) {
