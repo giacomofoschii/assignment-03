@@ -3,6 +3,7 @@ package pcd.ass03.actors;
 import akka.actor.typed.*;
 import akka.actor.typed.javadsl.*;
 import pcd.ass03.model.BoidState;
+import pcd.ass03.model.SimulationMetrics;
 import pcd.ass03.protocols.*;
 import pcd.ass03.utils.*;
 
@@ -10,8 +11,11 @@ import java.time.Duration;
 import java.util.*;
 
 public class ManagerActor {
+    private static final int FPS = 25;
+    private static final int TICK_NUMBER = 40;
 
     private final ActorContext<ManagerProtocol.Command> context;
+    private ActorRef<GUIProtocol.Command> guiActor;
     private final TimerScheduler<ManagerProtocol.Command> timers;
     private final Map<String, BoidState> currentStates = new HashMap<>();
     private final Map<String, ActorRef<BoidProtocol.Command>> boidActors = new HashMap<>();
@@ -31,6 +35,13 @@ public class ManagerActor {
     }
 
     private Behavior<ManagerProtocol.Command> idle() {
+        // Create GUIActor
+        //Uncomment if you need guiActor variable
+        guiActor = context.spawn(
+                GUIActor.create(new BoidsParams(800,800), this.context.getSelf()),
+                "gui-actor"
+        );
+
         return Behaviors.receive(ManagerProtocol.Command.class)
                 .onMessage(ManagerProtocol.StartSimulation.class, this::onStart)
                 .build();
@@ -66,21 +77,65 @@ public class ManagerActor {
             this.currentStates.put(id, new BoidState(initialPos, initialVel, id));
         }
 
-        // Create GUIActor
-        //TODO: Uncomment if you need
-        /*ActorRef<GUIProtocol.Command> guiActor =*/ context.spawn(
-                GUIActor.create(params, this.currentStates, this.context.getSelf()),
-                "gui-actor"
-        );
+        guiActor.tell(new GUIProtocol.RenderFrame(this.currentStates.values().stream().toList(),
+                new SimulationMetrics(cmd.nBoids(), FPS, TICK_NUMBER)));
 
         // Schedule the first tick
-        timers.startTimerAtFixedRate(new ManagerProtocol.Tick(), Duration.ofMillis(40));
+        timers.startTimerAtFixedRate(new ManagerProtocol.Tick(), Duration.ofMillis(TICK_NUMBER));
 
         return running();
     }
 
-    //TODO: Implement the running behavior
     private Behavior<ManagerProtocol.Command> running() {
-        return null;
+        return Behaviors.receive(ManagerProtocol.Command.class)
+                .onMessage(ManagerProtocol.Tick.class, this::onTick)
+                .onMessage(ManagerProtocol.BoidUpdated.class, this::onBoidUpdated)
+                .onMessage(ManagerProtocol.PauseSimulation.class, this::onPause)
+                .onMessage(ManagerProtocol.ResumeSimulation.class, this::onResume)
+                .onMessage(ManagerProtocol.StopSimulation.class, this::onStop)
+                .build();
+    }
+
+    private Behavior<ManagerProtocol.Command> onResume(ManagerProtocol.ResumeSimulation resumeSimulation) {
+        // Restart the timer
+        timers.startTimerAtFixedRate(new ManagerProtocol.Tick(), Duration.ofMillis(TICK_NUMBER));
+        return running();
+    }
+
+    private Behavior<ManagerProtocol.Command> onPause(ManagerProtocol.PauseSimulation pauseSimulation) {
+        // Stop the timer
+        timers.cancel(new ManagerProtocol.Tick());
+        return paused();
+    }
+
+    private Behavior<ManagerProtocol.Command> onStop(ManagerProtocol.StopSimulation stopSimulation) {
+        timers.cancelAll();
+        return Behaviors.stopped();
+    }
+
+    private Behavior<ManagerProtocol.Command> onBoidUpdated(ManagerProtocol.BoidUpdated boidUpdated) {
+        String boidId = boidUpdated.boidId();
+        currentStates.put(boidId, new BoidState(boidUpdated.position(), boidUpdated.velocity(), boidId));
+
+        return Behaviors.same();
+    }
+
+    private Behavior<ManagerProtocol.Command> onTick(ManagerProtocol.Tick tick) {
+        List<BoidState> states = new ArrayList<>(currentStates.values());
+        for(ActorRef<BoidProtocol.Command> boidActor : boidActors.values()) {
+            boidActor.tell(new BoidProtocol.UpdateRequest(System.currentTimeMillis(), states));
+        }
+
+        guiActor.tell(new GUIProtocol.RenderFrame(states,
+                new SimulationMetrics(boidActors.size(), FPS, System.currentTimeMillis())));
+
+        return Behaviors.same();
+    }
+
+    private Behavior<ManagerProtocol.Command> paused() {
+        return Behaviors.receive(ManagerProtocol.Command.class)
+                .onMessage(ManagerProtocol.ResumeSimulation.class, this::onResume)
+                .onMessage(ManagerProtocol.StopSimulation.class, this::onStop)
+                .build();
     }
 }

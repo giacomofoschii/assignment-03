@@ -3,7 +3,6 @@ package pcd.ass03.actors;
 import akka.actor.typed.ActorRef;
 import akka.actor.typed.Behavior;
 import akka.actor.typed.javadsl.*;
-import pcd.ass03.model.BoidState;
 import pcd.ass03.protocols.ManagerProtocol;
 import pcd.ass03.view.BoidsPanel;
 import pcd.ass03.protocols.GUIProtocol;
@@ -24,13 +23,12 @@ public class GUIActor implements ChangeListener {
     private JFrame frame;
     private BoidsPanel boidsPanel;
     private JSlider cohesionSlider, separationSlider, alignmentSlider;
-    private JButton startButton, pauseButton, stopButton;
+    private JButton resumeButton, pauseButton, stopButton;
     private JLabel statusLabel;
     private boolean isPaused = false;
     private boolean isRunning = false;
 
     private GUIActor(BoidsParams boidsParams,
-                     Map<String, BoidState> boids,
                      ActorRef<ManagerProtocol.Command> managerActor) {
         this.boidsParams = boidsParams;
         this.managerActor = managerActor;
@@ -40,18 +38,28 @@ public class GUIActor implements ChangeListener {
 
     private void showInitialDialog() {
         // Create temporary frame for dialog parent
-        JFrame tempFrame = new JFrame();
-        tempFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        JFrame parentFrame = (frame != null) ? frame : new JFrame();
+        if (frame == null) {
+            parentFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        }
 
-        InitialDialog dialog = new InitialDialog(tempFrame);
+        InitialDialog dialog = new InitialDialog(parentFrame);
         if (dialog.showDialog()) {
             int nBoids = dialog.getNBoids();
-            tempFrame.dispose();
+
+            if(frame == null) {
+                parentFrame.dispose();
+            }
 
             // Create main GUI
-            createMainGUI(nBoids);
+            if (frame == null) {
+                this.createMainGUI(nBoids);
+            } else {
+                updateGUIForRestart(nBoids);
+            }
 
-            // Tell manager to start simulation
+
+            // Tell the manager to start simulation
             managerActor.tell(new ManagerProtocol.StartSimulation(
                     nBoids,
                     boidsParams.getWidth(),
@@ -59,9 +67,13 @@ public class GUIActor implements ChangeListener {
             ));
 
             isRunning = true;
+            isPaused = false;
+            updateButtonStates();
             statusLabel.setText("Status: Running");
         } else {
-            System.exit(0);
+            if (frame == null) {
+                System.exit(0);
+            }
         }
     }
 
@@ -82,18 +94,18 @@ public class GUIActor implements ChangeListener {
         JPanel cpTop = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
         cpTop.setBorder(BorderFactory.createTitledBorder("Simulation Controls"));
 
-        startButton = new JButton("Restart");
+        resumeButton = new JButton("Resume");
         pauseButton = new JButton("Pause");
         stopButton = new JButton("Stop");
         statusLabel = new JLabel("Status: Starting...");
         statusLabel.setFont(new Font("Arial", Font.BOLD, 12));
 
         // Add action listeners
-        startButton.addActionListener(e -> onRestart());
+        resumeButton.addActionListener(e -> onPauseResume());
         pauseButton.addActionListener(e -> onPauseResume());
         stopButton.addActionListener(e -> onStop());
 
-        cpTop.add(startButton);
+        cpTop.add(resumeButton);
         cpTop.add(pauseButton);
         cpTop.add(stopButton);
         cpTop.add(Box.createHorizontalStrut(20));
@@ -123,23 +135,64 @@ public class GUIActor implements ChangeListener {
         frame.setContentPane(mainPanel);
         frame.setLocationRelativeTo(null);
         frame.setVisible(true);
+
+        updateButtonStates();
     }
 
-    // TODO: Implement the actions for buttons
+    private void updateGUIForRestart(int nBoids) {
+        if(boidsPanel != null) {
+            boidsPanel.setNBoids(nBoids);
+            boidsPanel.updateBoids(new ArrayList<>());
+            boidsPanel.repaint();
+        }
+    }
+
+    private void updateButtonStates() {
+        if (this.pauseButton != null
+                && this.resumeButton != null
+                && this.stopButton != null) {
+            if (!isRunning) {
+                this.pauseButton.setEnabled(false);
+                this.resumeButton.setEnabled(false);
+                this.stopButton.setEnabled(false);
+            } else if (isPaused) {
+                this.pauseButton.setEnabled(false);
+                this.resumeButton.setEnabled(true);
+                this.stopButton.setEnabled(true);
+            } else {
+                this.pauseButton.setEnabled(true);
+                this.resumeButton.setEnabled(false);
+                this.stopButton.setEnabled(true);
+            }
+        }
+    }
+
     private void onStop() {
+        if (isRunning) {
+            managerActor.tell(new ManagerProtocol.StopSimulation());
+            updateButtonStates();
+            statusLabel.setText("Status: Stopped");
+        }
     }
 
-    // TODO: Implement the actions for buttons
     private void onPauseResume() {
+        if(isRunning) {
+            if (isPaused) {
+                managerActor.tell(new ManagerProtocol.ResumeSimulation());
+                isPaused = false;
+                statusLabel.setText("Status: Paused");
+            } else {
+                managerActor.tell(new ManagerProtocol.PauseSimulation());
+                isPaused = true;
+                statusLabel.setText("Status: Running - Resumed");
+            }
+            updateButtonStates();
+        }
     }
 
-    // TODO: Implement the actions for buttons
-    private void onRestart() {
-    }
-
-    public static Behavior<GUIProtocol.Command> create(BoidsParams boidsParams, Map<String, BoidState> boids,
+    public static Behavior<GUIProtocol.Command> create(BoidsParams boidsParams,
                                                        ActorRef<ManagerProtocol.Command> managerActor) {
-        return Behaviors.setup(ctx -> new GUIActor(boidsParams, boids, managerActor).behavior());
+        return Behaviors.setup(ctx -> new GUIActor(boidsParams, managerActor).behavior());
     }
 
     private Behavior<GUIProtocol.Command> behavior() {
@@ -151,9 +204,11 @@ public class GUIActor implements ChangeListener {
 
     private Behavior<GUIProtocol.Command> onRenderFrame(GUIProtocol.RenderFrame msg) {
         SwingUtilities.invokeLater(() -> {
-            this.boidsPanel.updateBoids(msg.boids());
-            this.boidsPanel.setFrameRate(msg.metrics().fps());
-            this.boidsPanel.repaint();
+            if (boidsPanel != null) {
+                this.boidsPanel.updateBoids(msg.boids());
+                this.boidsPanel.setFrameRate(msg.metrics().fps());
+                this.boidsPanel.repaint();
+            }
         });
         return Behaviors.same();
     }
