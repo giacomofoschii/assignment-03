@@ -48,6 +48,9 @@ public class ManagerActor {
 
         return Behaviors.receive(ManagerProtocol.Command.class)
                 .onMessage(ManagerProtocol.StartSimulation.class, this::onStart)
+                .onMessage(ManagerProtocol.BoidUpdated.class, msg -> Behaviors.same()) // Ignore residual updates
+                .onMessage(ManagerProtocol.UpdateCompleted.class, msg -> Behaviors.same()) // Ignore residual completions
+                .onMessage(ManagerProtocol.Tick.class, msg -> Behaviors.same()) // Ignore residual ticks
                 .build();
     }
 
@@ -118,6 +121,7 @@ public class ManagerActor {
         boidActors.values().forEach(this.context::stop);
 
         this.context.stop(barrierManager);
+        this.context.stop(guiActor);
 
         this.boidActors.clear();
         this.currentStates.clear();
