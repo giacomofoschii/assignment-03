@@ -11,8 +11,6 @@ import java.util.*;
 import java.awt.*;
 
 public class GUIActor implements ChangeListener {
-    public static final int SCREEN_WIDTH = 800, SCREEN_HEIGHT = 800;
-
     private final ActorRef<ManagerProtocol.Command> managerActor;
     private final BoidsParams boidsParams;
 
@@ -76,7 +74,7 @@ public class GUIActor implements ChangeListener {
         final int envHeight = (int) Math.round(boidsParams.getHeight());
 
         frame = new JFrame("Boids Simulation");
-        frame.setSize(SCREEN_WIDTH, SCREEN_HEIGHT);
+        frame.setSize((int) Math.round(boidsParams.getWidth()),(int) Math.round(boidsParams.getHeight()));
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
         JPanel mainPanel = new JPanel(new BorderLayout());
@@ -98,7 +96,7 @@ public class GUIActor implements ChangeListener {
         stopButton.setPreferredSize(buttonSize);
 
         statusLabel = new JLabel("Status: Starting...");
-        statusLabel.setFont(new Font("Arial", Font.BOLD, 12));
+        statusLabel.setFont(new Font("SansSerif", Font.BOLD, 12));
 
         // Add action listeners
         resumeButton.addActionListener(e -> onPauseResume());
@@ -114,10 +112,11 @@ public class GUIActor implements ChangeListener {
         mainPanel.add(BorderLayout.NORTH, cpTop);
 
         // Sliders panel at bottom
-        JPanel slidersPanel = new JPanel(new GridLayout(3, 2, 3, 3));
+        JPanel slidersPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 5));
         slidersPanel.setBorder(BorderFactory.createTitledBorder("Parameters"));
 
         Dimension sliderSize = new Dimension(100, 30);
+
         cohesionSlider = makeSlider();
         cohesionSlider.setPreferredSize(sliderSize);
         separationSlider = makeSlider();
@@ -206,7 +205,6 @@ public class GUIActor implements ChangeListener {
         return Behaviors.receive(GUIProtocol.Command.class)
             .onMessage(GUIProtocol.RenderFrame.class, this::onRenderFrame)
             .onMessage(GUIProtocol.UpdateWeights.class, this::onUpdateWeights)
-                .onMessage(GUIProtocol.ShowInitialDialog.class, this::onShowInitialDialog)
             .build();
     }
 
@@ -225,11 +223,6 @@ public class GUIActor implements ChangeListener {
         this.boidsParams.setSeparationWeight(msg.separationWeight());
         this.boidsParams.setCohesionWeight(msg.cohesionWeight());
         this.boidsParams.setAlignmentWeight(msg.alignmentWeight());
-        return Behaviors.same();
-    }
-
-    private Behavior<GUIProtocol.Command> onShowInitialDialog(GUIProtocol.ShowInitialDialog msg) {
-        SwingUtilities.invokeLater(this::showInitialDialog);
         return Behaviors.same();
     }
 

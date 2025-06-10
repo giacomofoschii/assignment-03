@@ -27,7 +27,7 @@ public class ManagerActor {
                          TimerScheduler<ManagerProtocol.Command> timers) {
         this.context = context;
         this.timers = timers;
-        this.boidsParams = new BoidsParams(800, 800); // Default parameters
+        this.boidsParams = new BoidsParams(800, 800);
     }
 
     public static Behavior<ManagerProtocol.Command> create() {
@@ -40,7 +40,6 @@ public class ManagerActor {
 
     private Behavior<ManagerProtocol.Command> idle() {
         // Create GUIActor
-        //Uncomment if you need guiActor variable
         guiActor = context.spawn(
                 GUIActor.create(boidsParams, this.context.getSelf()),
                 "gui-actor"
@@ -53,13 +52,8 @@ public class ManagerActor {
 
     private Behavior<ManagerProtocol.Command> onStart(ManagerProtocol.StartSimulation cmd) {
         this.currentStates.clear();
-        for (ActorRef<BoidProtocol.Command> actor : boidActors.values()) {
-            this.context.stop(actor);
-        }
         this.boidActors.clear();
-        if(this.barrierManager != null) {
-            this.context.stop(this.barrierManager);
-        }
+        this.currentTick = 0;
 
         int nBoids = cmd.nBoids();
         double width = cmd.width();
@@ -78,12 +72,11 @@ public class ManagerActor {
                     (Math.random() - 0.5) * height);
             V2d initialVel = new V2d(
                     (Math.random() - 0.5) * 2,
-                    (Math.random() - 0.5) * 2
-            );
+                    (Math.random() - 0.5) * 2);
+
             ActorRef<BoidProtocol.Command> boidRef = context.spawn(
                     BoidActor.create(id, initialPos, boidsParams, this.context.getSelf(), barrierManager),
-                    id + "-" + System.currentTimeMillis()
-            );
+                    id + "-" + System.currentTimeMillis());
 
             this.boidActors.put(id, boidRef);
             this.currentStates.put(id, new BoidState(initialPos, initialVel, id));
@@ -125,20 +118,16 @@ public class ManagerActor {
     private Behavior<ManagerProtocol.Command> onStop(ManagerProtocol.StopSimulation stopSimulation) {
         timers.cancelAll();
 
-        for (ActorRef<BoidProtocol.Command> actor : boidActors.values()) {
-            this.context.stop(actor);
-        }
+        boidActors.values().forEach(this.context::stop);
+
+        this.context.stop(barrierManager);
+        this.context.stop(guiActor);
+
         this.boidActors.clear();
         this.currentStates.clear();
-
-        if(this.barrierManager != null) {
-            this.context.stop(this.barrierManager);
-            this.barrierManager = null;
-        }
-
-        guiActor.tell(new GUIProtocol.ShowInitialDialog());
-
-        return Behaviors.stopped();
+        this.currentTick = 0;
+        
+        return create();
     }
 
     private Behavior<ManagerProtocol.Command> onUpdateCompleted(ManagerProtocol.UpdateCompleted cmd) {

@@ -38,18 +38,13 @@ public class BoidsPanel extends JPanel {
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
         setBackground(Color.WHITE);
-        
-        var w = GUIActor.SCREEN_WIDTH;
-        var h = GUIActor.SCREEN_HEIGHT;
-        var xScale = w/this.envWidth;
-        // var yScale = h/envHeight;
 
         g.setColor(Color.BLUE);
         for (BoidState boid : boids) {
         	var x = boid.pos().x();
         	var y = boid.pos().y();
-        	int px = (int)(w/2 + x*xScale);
-        	int py = (int)(h/2 - y*xScale);
+        	int px = (int)(this.envWidth/2 + x);
+        	int py = (int)(this.envHeight/2 - y);
             g.fillOval(px,py, 5, 5);
         }
         
