@@ -14,7 +14,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class ManagerActor {
     private static final int FPS = 25;
     private static final int TICK_NUMBER = 40;
-    private static final AtomicInteger GUI_NAME = new AtomicInteger(0);
+    private static final AtomicInteger VERSION = new AtomicInteger(0);
 
     private final ActorContext<ManagerProtocol.Command> context;
     private ActorRef<BarrierProtocol.Command> barrierManager;
@@ -43,7 +43,7 @@ public class ManagerActor {
         // Create GUIActor
         guiActor = context.spawn(
                 GUIActor.create(boidsParams, this.context.getSelf()),
-                "gui-actor-" + GUI_NAME.getAndIncrement()
+                "gui-actor-" + VERSION.getAndIncrement()
         );
 
         return Behaviors.receive(ManagerProtocol.Command.class)
@@ -61,7 +61,7 @@ public class ManagerActor {
 
         barrierManager = context.spawn(
                 BarrierActor.create(nBoids, this.context.getSelf()),
-                "barrier-actor"
+                "barrier-actor" + VERSION.get()
         );
 
         // Create Boid actors
