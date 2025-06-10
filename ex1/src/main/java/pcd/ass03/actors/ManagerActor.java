@@ -9,10 +9,12 @@ import pcd.ass03.utils.*;
 
 import java.time.Duration;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class ManagerActor {
     private static final int FPS = 25;
     private static final int TICK_NUMBER = 40;
+    private static final AtomicInteger GUI_NAME = new AtomicInteger(0);
 
     private final ActorContext<ManagerProtocol.Command> context;
     private ActorRef<BarrierProtocol.Command> barrierManager;
@@ -20,14 +22,13 @@ public class ManagerActor {
     private final TimerScheduler<ManagerProtocol.Command> timers;
     private final Map<String, BoidState> currentStates = new HashMap<>();
     private final Map<String, ActorRef<BoidProtocol.Command>> boidActors = new HashMap<>();
-    private final BoidsParams boidsParams;
+    private final BoidsParams boidsParams = new BoidsParams(800, 800);;
     private long currentTick = 0;
 
     private ManagerActor(ActorContext<ManagerProtocol.Command> context,
                          TimerScheduler<ManagerProtocol.Command> timers) {
         this.context = context;
         this.timers = timers;
-        this.boidsParams = new BoidsParams(800, 800);
     }
 
     public static Behavior<ManagerProtocol.Command> create() {
@@ -42,7 +43,7 @@ public class ManagerActor {
         // Create GUIActor
         guiActor = context.spawn(
                 GUIActor.create(boidsParams, this.context.getSelf()),
-                "gui-actor" + System.currentTimeMillis()
+                "gui-actor-" + GUI_NAME.getAndIncrement()
         );
 
         return Behaviors.receive(ManagerProtocol.Command.class)
@@ -170,6 +171,10 @@ public class ManagerActor {
         return Behaviors.receive(ManagerProtocol.Command.class)
                 .onMessage(ManagerProtocol.ResumeSimulation.class, this::onResume)
                 .onMessage(ManagerProtocol.StopSimulation.class, this::onStop)
+                .onMessage(ManagerProtocol.UpdateParams.class, this::onUpdateParams)
+                .onMessage(ManagerProtocol.BoidUpdated.class, this::onBoidUpdated)
+                .onMessage(ManagerProtocol.UpdateCompleted.class, msg -> Behaviors.same())
+                .onMessage(ManagerProtocol.Tick.class, msg -> Behaviors.same())
                 .build();
     }
 }
