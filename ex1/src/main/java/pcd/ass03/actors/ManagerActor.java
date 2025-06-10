@@ -42,7 +42,7 @@ public class ManagerActor {
         // Create GUIActor
         guiActor = context.spawn(
                 GUIActor.create(boidsParams, this.context.getSelf()),
-                "gui-actor"
+                "gui-actor" + System.currentTimeMillis()
         );
 
         return Behaviors.receive(ManagerProtocol.Command.class)
@@ -51,10 +51,6 @@ public class ManagerActor {
     }
 
     private Behavior<ManagerProtocol.Command> onStart(ManagerProtocol.StartSimulation cmd) {
-        this.currentStates.clear();
-        this.boidActors.clear();
-        this.currentTick = 0;
-
         int nBoids = cmd.nBoids();
         double width = cmd.width();
         double height = cmd.height();
@@ -121,12 +117,11 @@ public class ManagerActor {
         boidActors.values().forEach(this.context::stop);
 
         this.context.stop(barrierManager);
-        this.context.stop(guiActor);
 
         this.boidActors.clear();
         this.currentStates.clear();
         this.currentTick = 0;
-        
+
         return create();
     }
 

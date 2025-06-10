@@ -178,6 +178,7 @@ public class GUIActor implements ChangeListener {
             managerActor.tell(new ManagerProtocol.StopSimulation());
             updateButtonStates();
             statusLabel.setText("Status: Stopped");
+            frame.dispose();
         }
     }
 
