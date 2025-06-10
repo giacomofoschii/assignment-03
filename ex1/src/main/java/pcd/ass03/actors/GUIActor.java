@@ -1,18 +1,14 @@
 package pcd.ass03.actors;
 
-import akka.actor.typed.ActorRef;
-import akka.actor.typed.Behavior;
+import akka.actor.typed.*;
 import akka.actor.typed.javadsl.*;
-import pcd.ass03.protocols.ManagerProtocol;
-import pcd.ass03.view.BoidsPanel;
-import pcd.ass03.protocols.GUIProtocol;
-import pcd.ass03.view.InitialDialog;
+import pcd.ass03.protocols.*;
+import pcd.ass03.view.*;
 
 import javax.swing.*;
 import javax.swing.event.*;
 import java.util.*;
 import java.awt.*;
-import java.util.Hashtable;
 
 public class GUIActor implements ChangeListener {
     public static final int SCREEN_WIDTH = 800, SCREEN_HEIGHT = 800;
