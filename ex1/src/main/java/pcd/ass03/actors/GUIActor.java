@@ -176,11 +176,11 @@ public class GUIActor implements ChangeListener {
             if (isPaused) {
                 managerActor.tell(new ManagerProtocol.ResumeSimulation());
                 isPaused = false;
-                statusLabel.setText("Status: Paused");
+                statusLabel.setText("Status: Running - Resumed");
             } else {
                 managerActor.tell(new ManagerProtocol.PauseSimulation());
                 isPaused = true;
-                statusLabel.setText("Status: Running - Resumed");
+                statusLabel.setText("Status: Paused");
             }
             updateButtonStates();
         }
@@ -224,7 +224,11 @@ public class GUIActor implements ChangeListener {
         slider.setPaintLabels(true);
 
         Hashtable<Integer, JLabel> labelTable = new Hashtable<>();
+        labelTable.put(0, new JLabel("0.0"));
+        labelTable.put(10, new JLabel("1.0"));
+        labelTable.put(20, new JLabel("2.0"));
         slider.setLabelTable(labelTable);
+        
         slider.addChangeListener(this);
         return slider;
     }

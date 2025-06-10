@@ -1,5 +1,6 @@
 package pcd.ass03.protocols;
 
+import pcd.ass03.actors.BoidsParams;
 import pcd.ass03.model.*;
 
 import java.util.List;
@@ -34,5 +35,13 @@ public interface BoidProtocol {
      * @param neighbors the list of neighboring boids
      */
     record NeighborsInfo(String boidId, List<BoidState> neighbors) implements Command {
+    }
+
+    /**
+     * Command to update the params for updating position of boids storm.
+     *
+     * @param params the new parameters for the updating logic
+     */
+    record UpdateParams(BoidsParams params) implements Command {
     }
 }

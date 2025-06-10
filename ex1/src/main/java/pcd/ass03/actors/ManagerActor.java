@@ -19,11 +19,13 @@ public class ManagerActor {
     private final TimerScheduler<ManagerProtocol.Command> timers;
     private final Map<String, BoidState> currentStates = new HashMap<>();
     private final Map<String, ActorRef<BoidProtocol.Command>> boidActors = new HashMap<>();
+    private BoidsParams boidsParams;
 
     private ManagerActor(ActorContext<ManagerProtocol.Command> context,
                          TimerScheduler<ManagerProtocol.Command> timers) {
         this.context = context;
         this.timers = timers;
+        this.boidsParams = new BoidsParams(800, 800); // Default parameters
     }
 
     public static Behavior<ManagerProtocol.Command> create() {
@@ -38,7 +40,7 @@ public class ManagerActor {
         // Create GUIActor
         //Uncomment if you need guiActor variable
         guiActor = context.spawn(
-                GUIActor.create(new BoidsParams(800,800), this.context.getSelf()),
+                GUIActor.create(boidsParams, this.context.getSelf()),
                 "gui-actor"
         );
 
@@ -51,7 +53,6 @@ public class ManagerActor {
         int nBoids = cmd.nBoids();
         double width = cmd.width();
         double height = cmd.height();
-        BoidsParams params = new BoidsParams(width, height);
 
         // Create NeighborhoodManager
         ActorRef<NeighborProtocol.Command> neighborManager = context.spawn(
@@ -69,7 +70,7 @@ public class ManagerActor {
                     (Math.random() - 0.5) * 2
             );
             ActorRef<BoidProtocol.Command> boidRef = context.spawn(
-                    BoidActor.create(id, initialPos, neighborManager, params, this.context.getSelf()),
+                    BoidActor.create(id, initialPos, neighborManager, boidsParams, this.context.getSelf()),
                     id
             );
 
@@ -90,6 +91,7 @@ public class ManagerActor {
         return Behaviors.receive(ManagerProtocol.Command.class)
                 .onMessage(ManagerProtocol.Tick.class, this::onTick)
                 .onMessage(ManagerProtocol.BoidUpdated.class, this::onBoidUpdated)
+                .onMessage(ManagerProtocol.UpdateParams.class, this::onUpdateParams)
                 .onMessage(ManagerProtocol.PauseSimulation.class, this::onPause)
                 .onMessage(ManagerProtocol.ResumeSimulation.class, this::onResume)
                 .onMessage(ManagerProtocol.StopSimulation.class, this::onStop)
@@ -128,6 +130,18 @@ public class ManagerActor {
 
         guiActor.tell(new GUIProtocol.RenderFrame(states,
                 new SimulationMetrics(boidActors.size(), FPS, System.currentTimeMillis())));
+
+        return Behaviors.same();
+    }
+
+    private Behavior<ManagerProtocol.Command> onUpdateParams(ManagerProtocol.UpdateParams updateParams) {
+        boidsParams.setAlignmentWeight(updateParams.alignment());
+        boidsParams.setCohesionWeight(updateParams.cohesion());
+        boidsParams.setSeparationWeight(updateParams.separation());
+
+        for (ActorRef<BoidProtocol.Command> boidActor : boidActors.values()) {
+            boidActor.tell(new BoidProtocol.UpdateParams(boidsParams));
+        }
 
         return Behaviors.same();
     }

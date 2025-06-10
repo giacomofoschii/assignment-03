@@ -17,7 +17,7 @@ public class BoidActor {
 
     private P2d position;
     private V2d velocity;
-    private final BoidsParams params;
+    private BoidsParams params;
 
     public BoidActor(ActorContext<BoidProtocol.Command> context, String boidId, P2d initialPos,
                      ActorRef<NeighborProtocol.Command> neighborManager, BoidsParams params,
@@ -25,6 +25,7 @@ public class BoidActor {
         this.context = context;
         this.boidId = boidId;
         this.position = initialPos;
+        this.velocity = new V2d((Math.random() - 0.5) * 2, (Math.random() - 0.5 ) * 2);
         this.neighborManager = neighborManager;
         this.params = params;
         this.managerActor = managerActor;
@@ -43,7 +44,13 @@ public class BoidActor {
         return Behaviors.receive(BoidProtocol.Command.class)
             .onMessage(BoidProtocol.UpdateRequest.class, this::onUpdateRequest)
             .onMessage(BoidProtocol.NeighborsInfo.class, this::onNeighborsInfo)
+            .onMessage(BoidProtocol.UpdateParams.class, this::onUpdateParams)
             .build();
+    }
+
+    private Behavior<BoidProtocol.Command> onUpdateParams(BoidProtocol.UpdateParams params) {
+        this.params = params.params();
+        return Behaviors.same();
     }
 
     private Behavior<BoidProtocol.Command> onUpdateRequest(BoidProtocol.UpdateRequest request) {
