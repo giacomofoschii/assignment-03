@@ -27,12 +27,12 @@ public class InitialDialog extends JDialog {
         startButton.addActionListener(e -> {
             try {
                 numberOfBoids = Integer.parseInt(boidsField.getText());
-                if (numberOfBoids > 0 && numberOfBoids <= 1000) {
+                if (numberOfBoids >= 0) {
                     confirmed = true;
                     dispose();
                 } else {
                     JOptionPane.showMessageDialog(this,
-                            "Please enter a number between 1 and 1000",
+                            "Please enter a number greater or equal than 0",
                             "Invalid Input",
                             JOptionPane.ERROR_MESSAGE);
                 }
