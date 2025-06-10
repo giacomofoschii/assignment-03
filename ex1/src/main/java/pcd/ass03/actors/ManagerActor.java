@@ -63,8 +63,7 @@ public class ManagerActor {
         // Create Boid actors
         for (int i = 0; i < nBoids; i++) {
             String id = "boid-" + i;
-            P2d initialPos = new P2d(-width / 2 * Math.random() * width,
-                    -height / 2 * height);
+            P2d initialPos = new P2d(Math.random() * width, Math.random() * height);
             V2d initialVel = new V2d(
                     (Math.random() - 0.5) * 2,
                     (Math.random() - 0.5) * 2
