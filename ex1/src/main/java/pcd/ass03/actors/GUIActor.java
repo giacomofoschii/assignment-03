@@ -79,7 +79,6 @@ public class GUIActor implements ChangeListener {
 
         JPanel mainPanel = new JPanel(new BorderLayout());
 
-        // Boids panel
         this.boidsPanel = new BoidsPanel(envWidth, envHeight, nBoids, new ArrayList<>());
         mainPanel.add(BorderLayout.CENTER, boidsPanel);
 
@@ -98,7 +97,6 @@ public class GUIActor implements ChangeListener {
         statusLabel = new JLabel("Status: Starting...");
         statusLabel.setFont(new Font("SansSerif", Font.BOLD, 12));
 
-        // Add action listeners
         resumeButton.addActionListener(e -> onPauseResume());
         pauseButton.addActionListener(e -> onPauseResume());
         stopButton.addActionListener(e -> onStop());
@@ -111,7 +109,6 @@ public class GUIActor implements ChangeListener {
 
         mainPanel.add(BorderLayout.NORTH, cpTop);
 
-        // Sliders panel at bottom
         JPanel slidersPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 5));
         slidersPanel.setBorder(BorderFactory.createTitledBorder("Parameters"));
 

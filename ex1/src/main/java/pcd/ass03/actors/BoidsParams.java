@@ -1,9 +1,14 @@
 package pcd.ass03.actors;
 
 public class BoidsParams {
+    private static final double AVOID_RADIUS = 20.0;
+    private static final double MAX_SPEED = 4.0;
+    private static final double PERCEPTION_RADIUS = 50.0;
+
     private double separationWeight = 1.0;
     private double alignmentWeight = 1.0;
     private double cohesionWeight = 1.0;
+
     private final double width;
     private final double height;
 
@@ -13,15 +18,15 @@ public class BoidsParams {
     }
 
     public double getWidth() {
-        return width;
+        return this.width;
     }
 
     public double getHeight() {
-        return height;
+        return this.height;
     }
 
     public double getAlignmentWeight() {
-        return alignmentWeight;
+        return this.alignmentWeight;
     }
 
     public void setAlignmentWeight(double alignmentWeight) {
@@ -29,7 +34,7 @@ public class BoidsParams {
     }
 
     public double getSeparationWeight() {
-        return separationWeight;
+        return this.separationWeight;
     }
 
     public void setSeparationWeight(double separationWeight) {
@@ -37,7 +42,7 @@ public class BoidsParams {
     }
 
     public double getCohesionWeight() {
-        return cohesionWeight;
+        return this.cohesionWeight;
     }
 
     public void setCohesionWeight(double cohesionWeight) {
@@ -45,30 +50,30 @@ public class BoidsParams {
     }
 
     public double getAvoidRadius() {
-        return 20.0;
+        return AVOID_RADIUS;
     }
 
     public double getMaxSpeed() {
-        return 4.0;
+        return MAX_SPEED;
     }
 
     public double getPerceptionRadius() {
-        return 50.0;
+        return PERCEPTION_RADIUS;
     }
 
     public double getMinX() {
-        return -width/2;
+        return -this.width/2;
     }
 
     public double getMaxX() {
-        return width/2;
+        return this.width/2;
     }
 
     public double getMinY() {
-        return -height/2;
+        return -this.height/2;
     }
 
     public double getMaxY() {
-        return height/2;
+        return this.height/2;
     }
 }

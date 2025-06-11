@@ -2,8 +2,7 @@ package pcd.ass03.actors;
 
 import akka.actor.typed.*;
 import akka.actor.typed.javadsl.*;
-import pcd.ass03.model.BoidState;
-import pcd.ass03.model.SimulationMetrics;
+import pcd.ass03.model.*;
 import pcd.ass03.protocols.*;
 import pcd.ass03.utils.*;
 
@@ -40,7 +39,6 @@ public class ManagerActor {
     }
 
     private Behavior<ManagerProtocol.Command> idle() {
-        // Create GUIActor
         guiActor = context.spawn(
                 GUIActor.create(boidsParams, this.context.getSelf()),
                 "gui-actor-" + VERSION.getAndIncrement()

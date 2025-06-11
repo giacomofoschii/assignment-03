@@ -8,22 +8,19 @@ import java.util.*;
 
 public class BarrierActor {
     private final int nBoids;
-    private final ActorContext<BarrierProtocol.Command> context;
     private final ActorRef<ManagerProtocol.Command> manager;
 
     private final Set<String> completedBoids = new HashSet<>();
     private long currentTick = 0;
 
-    public BarrierActor(ActorContext<BarrierProtocol.Command> context,
-                        int nBoids,
+    public BarrierActor(int nBoids,
                         ActorRef<ManagerProtocol.Command> manager) {
         this.nBoids = nBoids;
         this.manager = manager;
-        this.context = context;
     }
 
     public static Behavior<BarrierProtocol.Command> create(int nBoids, ActorRef<ManagerProtocol.Command> manager) {
-        return Behaviors.setup(context -> new BarrierActor(context, nBoids, manager).behavior());
+        return Behaviors.setup(context -> new BarrierActor(nBoids, manager).behavior());
     }
 
     private Behavior<BarrierProtocol.Command> behavior() {
@@ -46,6 +43,7 @@ public class BarrierActor {
             manager.tell(new ManagerProtocol.UpdateCompleted(currentTick));
             completedBoids.clear();
         }
+
         return Behaviors.same();
     }
 }

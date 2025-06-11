@@ -30,7 +30,6 @@ public class BoidActor {
                                                         BoidsParams params,
                                                         ActorRef<ManagerProtocol.Command> managerActor,
                                                         ActorRef<BarrierProtocol.Command> barrierActor) {
-        // Implementation of the BoidActor behavior goes here
         return Behaviors.setup(context -> new BoidActor(boidId, initialPos, initialVel,
                                                         params, managerActor, barrierActor).behavior());
     }
@@ -54,7 +53,7 @@ public class BoidActor {
         V2d alignment = calculateAlignment(nearbyBoids);
         V2d cohesion = calculateCohesion(nearbyBoids);
 
-        velocity = velocity.sum(alignment.mul(params.getAlignmentWeight()))
+        this.velocity = velocity.sum(alignment.mul(params.getAlignmentWeight()))
                 .sum(separation.mul(params.getSeparationWeight()))
                 .sum(cohesion.mul(params.getCohesionWeight()));
 
@@ -62,11 +61,11 @@ public class BoidActor {
         double speed = velocity.abs();
 
         if (speed > params.getMaxSpeed()) {
-            velocity = velocity.getNormalized().mul(params.getMaxSpeed());
+            this.velocity = velocity.getNormalized().mul(params.getMaxSpeed());
         }
 
         /* Update position */
-        position = position.sum(velocity);
+        this.position = position.sum(velocity);
 
         /* environment wrap-around */
         if (position.x() < params.getMinX()) position = position.sum(new V2d(params.getWidth(), 0));
