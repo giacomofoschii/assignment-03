@@ -75,7 +75,7 @@ public class ManagerActor {
                     (Math.random() - 0.5) * 2);
 
             ActorRef<BoidProtocol.Command> boidRef = context.spawn(
-                    BoidActor.create(id, initialPos, boidsParams, this.context.getSelf(), barrierManager),
+                    BoidActor.create(id, initialPos, initialVel, boidsParams, this.context.getSelf(), barrierManager),
                     id + "-" + System.currentTimeMillis());
 
             this.boidActors.put(id, boidRef);

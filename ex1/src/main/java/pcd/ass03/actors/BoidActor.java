@@ -9,31 +9,30 @@ import pcd.ass03.utils.*;
 import java.util.List;
 
 public class BoidActor {
-    public static final int NEIGHBOR_TIMEOUT = 1000;
     private final String boidId;
     private final ActorRef<ManagerProtocol.Command> managerActor;
     private final ActorRef<BarrierProtocol.Command> barrierActor;
-
     private P2d position;
     private V2d velocity;
     private BoidsParams params;
 
-    public BoidActor(ActorContext<BoidProtocol.Command> context, String boidId, P2d initialPos, BoidsParams params,
+    public BoidActor(String boidId, P2d initialPos, V2d initialVel, BoidsParams params,
                      ActorRef<ManagerProtocol.Command> managerActor, ActorRef<BarrierProtocol.Command> barrierActor) {
         this.boidId = boidId;
         this.position = initialPos;
-        this.velocity = new V2d((Math.random() - 0.5) * 2, (Math.random() - 0.5 ) * 2);
+        this.velocity = initialVel;
         this.params = params;
         this.managerActor = managerActor;
         this.barrierActor = barrierActor;
     }
 
-    public static Behavior<BoidProtocol.Command> create(String boidId, P2d initialPos, BoidsParams params,
+    public static Behavior<BoidProtocol.Command> create(String boidId, P2d initialPos, V2d initialVel,
+                                                        BoidsParams params,
                                                         ActorRef<ManagerProtocol.Command> managerActor,
                                                         ActorRef<BarrierProtocol.Command> barrierActor) {
         // Implementation of the BoidActor behavior goes here
-        return Behaviors.setup(context -> new BoidActor(context, boidId, initialPos, params,
-                                                        managerActor, barrierActor).behavior());
+        return Behaviors.setup(context -> new BoidActor(boidId, initialPos, initialVel,
+                                                        params, managerActor, barrierActor).behavior());
     }
 
     private Behavior<BoidProtocol.Command> behavior() {
