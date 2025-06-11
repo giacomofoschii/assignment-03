@@ -9,6 +9,6 @@ public class BoidsSimulation {
         ActorSystem<ManagerProtocol.Command> system =
                 ActorSystem.create(ManagerActor.create(), "boids-system");
 
-        Runtime.getRuntime().addShutdownHook(new Thread(system::terminate));
+        system.getWhenTerminated().toCompletableFuture().join();
     }
 }
