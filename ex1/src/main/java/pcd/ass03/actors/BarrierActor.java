@@ -9,9 +9,7 @@ import java.util.*;
 public class BarrierActor {
     private final int nBoids;
     private final ActorRef<ManagerProtocol.Command> manager;
-
     private final Set<String> completedBoids = new HashSet<>();
-    private long currentTick = 0;
 
     public BarrierActor(int nBoids,
                         ActorRef<ManagerProtocol.Command> manager) {
@@ -32,7 +30,6 @@ public class BarrierActor {
 
     private Behavior<BarrierProtocol.Command> onStartPhase(BarrierProtocol.StartPhase cmd) {
         completedBoids.clear();
-        currentTick = cmd.tick();
         return Behaviors.same();
     }
 
@@ -40,7 +37,7 @@ public class BarrierActor {
         completedBoids.add(cmd.boidId());
 
         if(completedBoids.size() >= nBoids) {
-            manager.tell(new ManagerProtocol.UpdateCompleted(currentTick));
+            manager.tell(new ManagerProtocol.UpdateCompleted(cmd.tick()));
             completedBoids.clear();
         }
 

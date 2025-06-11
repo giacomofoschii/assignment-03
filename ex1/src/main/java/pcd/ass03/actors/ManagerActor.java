@@ -36,16 +36,16 @@ public class ManagerActor {
 
     public static Behavior<ManagerProtocol.Command> create() {
         return Behaviors.setup(context ->
-            Behaviors.withTimers(timers ->
-                new ManagerActor(context, timers ).idle()
-            )
-        );
+                Behaviors.withTimers(timers ->
+                    Behaviors.supervise(new ManagerActor(context, timers).idle())
+                            .onFailure(SupervisorStrategy.restart())
+        ));
     }
 
     private Behavior<ManagerProtocol.Command> idle() {
         guiActor = context.spawn(
-                GUIActor.create(boidsParams, this.context.getSelf()),
-                "gui-actor-" + VERSION.getAndIncrement()
+                Behaviors.supervise(GUIActor.create(boidsParams, this.context.getSelf()))
+                        .onFailure(SupervisorStrategy.restart()), "gui-actor" + VERSION.getAndIncrement()
         );
 
         return Behaviors.receive(ManagerProtocol.Command.class)
@@ -62,7 +62,8 @@ public class ManagerActor {
         double height = cmd.height();
 
         barrierManager = context.spawn(
-                BarrierActor.create(nBoids, this.context.getSelf()),
+                Behaviors.supervise(BarrierActor.create(nBoids, this.context.getSelf()))
+                        .onFailure(SupervisorStrategy.restart()),
                 "barrier-actor" + VERSION.get()
         );
 
@@ -77,7 +78,11 @@ public class ManagerActor {
                     (Math.random() - 0.5) * 2);
 
             ActorRef<BoidProtocol.Command> boidRef = context.spawn(
-                    BoidActor.create(id, initialPos, initialVel, boidsParams, this.context.getSelf(), barrierManager),
+                    Behaviors.supervise(BoidActor.create(id, initialPos, initialVel, boidsParams,
+                                    this.context.getSelf(), barrierManager))
+                            .onFailure(SupervisorStrategy.restartWithBackoff(
+                                    Duration.ofMillis(100), Duration.ofSeconds(1), 0.2f)
+                                    .withResetBackoffAfter(Duration.ofSeconds(10))),
                     id + "-" + System.currentTimeMillis());
 
             this.boidActors.put(id, boidRef);
