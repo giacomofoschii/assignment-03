@@ -233,7 +233,7 @@ public class GUIActor implements ChangeListener {
 
         Hashtable<Integer, JLabel> labelTable = new Hashtable<>();
         labelTable.put(0, new JLabel(("")));
-        labelTable.put(20, new JLabel(""));
+        labelTable.put(100, new JLabel(""));
         slider.setLabelTable(labelTable);
         
         slider.addChangeListener(this);

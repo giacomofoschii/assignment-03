@@ -11,7 +11,7 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class ManagerActor {
-    private static final int FPS = 25;
+    private static final int FPS = 60;
     private static final int TICK_NUMBER = 40;
     private static final AtomicInteger VERSION = new AtomicInteger(0);
 
@@ -21,13 +21,17 @@ public class ManagerActor {
     private final TimerScheduler<ManagerProtocol.Command> timers;
     private final Map<String, BoidState> currentStates = new HashMap<>();
     private final Map<String, ActorRef<BoidProtocol.Command>> boidActors = new HashMap<>();
-    private final BoidsParams boidsParams = new BoidsParams(800, 800);;
-    private long currentTick = 0;
+    private final BoidsParams boidsParams;
+    private long currentTick;
+    private long lastFrameTime;
 
     private ManagerActor(ActorContext<ManagerProtocol.Command> context,
                          TimerScheduler<ManagerProtocol.Command> timers) {
         this.context = context;
         this.timers = timers;
+        this.boidsParams = new BoidsParams(800,800);
+        this.currentTick = 0;
+        this.lastFrameTime = 0;
     }
 
     public static Behavior<ManagerProtocol.Command> create() {
@@ -129,9 +133,22 @@ public class ManagerActor {
     }
 
     private Behavior<ManagerProtocol.Command> onUpdateCompleted(ManagerProtocol.UpdateCompleted cmd) {
+        long currentMills = System.currentTimeMillis();
+        int fps = 0;
+        if (lastFrameTime != 0) {
+            long delta = currentMills - lastFrameTime;
+            if (delta > 0) {
+                fps = (int) (1000.0 / delta);
+                if (fps > FPS) {
+                    fps = FPS;
+                }
+            }
+        }
+        lastFrameTime = currentMills;
+
         guiActor.tell(new GUIProtocol.RenderFrame(
                 currentStates.values().stream().toList(),
-                new SimulationMetrics(boidActors.size(), FPS, System.currentTimeMillis() - cmd.tick())
+                new SimulationMetrics(boidActors.size(), fps, currentMills - cmd.tick())
         ));
 
         return Behaviors.same();
