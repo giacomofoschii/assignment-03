@@ -61,6 +61,63 @@ public class BoidActorTest {
         assertTrue(coh.y() > 0, "Cohesion Y should be positive");
     }
 
+    private V2d calcSep(P2d pos, List<BoidState> neighbors, double avoidRadius) {
+        double dx = 0;
+        double dy = 0;
+        int count = 0;
+
+        for (BoidState other : neighbors) {
+            P2d otherPos = other.pos();
+            double distance = pos.distance(otherPos);
+            if (distance < avoidRadius && distance > 0) {
+                dx += pos.x() - otherPos.x();
+                dy += pos.y() - otherPos.y();
+                count++;
+            }
+        }
+
+        if (count > 0) {
+            dx /= count;
+            dy /= count;
+            return new V2d(dx, dy).getNormalized();
+        }
+        return new V2d(0, 0);
+    }
+
+    private V2d calcAli(P2d vel, List<BoidState> neighbors) {
+        if (neighbors.isEmpty()) return new V2d(0, 0);
+
+        double avgVx = 0;
+        double avgVy = 0;
+
+        for (BoidState other : neighbors) {
+            avgVx += other.vel().x();
+            avgVy += other.vel().y();
+        }
+
+        avgVx /= neighbors.size();
+        avgVy /= neighbors.size();
+
+        return new V2d(avgVx - vel.x(), avgVy - vel.y()).getNormalized();
+    }
+
+    private V2d calcCoh(P2d pos, List<BoidState> neighbors) {
+        if (neighbors.isEmpty()) return new V2d(0, 0);
+
+        double centerX = 0;
+        double centerY = 0;
+
+        for (BoidState other : neighbors) {
+            centerX += other.pos().x();
+            centerY += other.pos().y();
+        }
+
+        centerX /= neighbors.size();
+        centerY /= neighbors.size();
+
+        return new V2d(centerX - pos.x(), centerY - pos.y()).getNormalized();
+    }
+
     @Test
     public void testBoidPositionUpdate() {
         TestProbe<ManagerProtocol.Command> managerProde = testKit.createTestProbe();
@@ -225,60 +282,64 @@ public class BoidActorTest {
         managerProbe.expectMessageClass(ManagerProtocol.BoidUpdated.class);
     }
 
-    private V2d calcSep(P2d pos, List<BoidState> neighbors, double avoidRadius) {
-        double dx = 0;
-        double dy = 0;
-        int count = 0;
+    @Test
+    public void testPerformanceWithManyBoids() {
+        TestProbe<ManagerProtocol.Command> managerProbe = testKit.createTestProbe();
+        TestProbe<BarrierProtocol.Command> barrierProbe = testKit.createTestProbe();
 
-        for (BoidState other : neighbors) {
-            P2d otherPos = other.pos();
-            double distance = pos.distance(otherPos);
-            if (distance < avoidRadius && distance > 0) {
-                dx += pos.x() - otherPos.x();
-                dy += pos.y() - otherPos.y();
-                count++;
-            }
+        List<BoidState> manyBoids = getBoidStates();
+
+        ActorRef<BoidProtocol.Command> testBoid = testKit.spawn(
+                BoidActor.create("perf-test-boid",
+                        new P2d(params.getWidth()/2, params.getHeight()/2),
+                        new V2d(1, 0),
+                        params,
+                        managerProbe.ref(),
+                        barrierProbe.ref()
+                )
+        );
+
+        long startTime = System.nanoTime();
+        int numUpdates = 10;
+
+        for(int i = 0; i < numUpdates; i++) {
+            testBoid.tell(new BoidProtocol.UpdateRequest(i, manyBoids));
+
+            ManagerProtocol.BoidUpdated update = managerProbe.expectMessageClass(
+                    ManagerProtocol.BoidUpdated.class
+            );
+            BarrierProtocol.BoidCompleted completion = barrierProbe.expectMessageClass(
+                    BarrierProtocol.BoidCompleted.class
+            );
+
+            assertNotNull(update);
+            assertNotNull(completion);
         }
 
-        if (count > 0) {
-            dx /= count;
-            dy /= count;
-            return new V2d(dx, dy).getNormalized();
-        }
-        return new V2d(0, 0);
+        long endTime = System.nanoTime();
+        long avgTimePerUpdate = (endTime - startTime) / numUpdates;
+
+        assertTrue(avgTimePerUpdate < 5_000_000, 
+                "Average time too high: " + avgTimePerUpdate + "ns");
     }
 
-    private V2d calcAli(P2d vel, List<BoidState> neighbors) {
-        if (neighbors.isEmpty()) return new V2d(0, 0);
+    private List<BoidState> getBoidStates() {
+        int numBoids = 20000;
+        List<BoidState> manyBoids = new ArrayList<>();
 
-        double avgVx = 0;
-        double avgVy = 0;
-
-        for (BoidState other : neighbors) {
-            avgVx += other.vel().x();
-            avgVy += other.vel().y();
+        Random rand = new Random();
+        for(int i = 0; i < numBoids; i++) {
+            double x = rand.nextDouble() * params.getWidth();
+            double y = rand.nextDouble() * params.getHeight();
+            double vx = rand.nextDouble() * 2 - 1; // velocità tra -1 e 1
+            double vy = rand.nextDouble() * 2 - 1;
+            manyBoids.add(new BoidState(
+                    new P2d(x, y),
+                    new V2d(vx, vy),
+                    "perf-boid-" + i
+            ));
         }
-
-        avgVx /= neighbors.size();
-        avgVy /= neighbors.size();
-
-        return new V2d(avgVx - vel.x(), avgVy - vel.y()).getNormalized();
+        return manyBoids;
     }
 
-    private V2d calcCoh(P2d pos, List<BoidState> neighbors) {
-        if (neighbors.isEmpty()) return new V2d(0, 0);
-
-        double centerX = 0;
-        double centerY = 0;
-
-        for (BoidState other : neighbors) {
-            centerX += other.pos().x();
-            centerY += other.pos().y();
-        }
-
-        centerX /= neighbors.size();
-        centerY /= neighbors.size();
-
-        return new V2d(centerX - pos.x(), centerY - pos.y()).getNormalized();
-    }
 }
