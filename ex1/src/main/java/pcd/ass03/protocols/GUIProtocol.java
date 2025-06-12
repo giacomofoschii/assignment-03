@@ -55,31 +55,6 @@ public interface GUIProtocol {
                          double alignmentWeight,
                          double cohesionWeight) implements Command {}
 
-
-    /**
-     * Command sent when user click on the "Pause" button in the GUI.
-     */
-    record UserPause() implements Command {}
-
-    /**
-     * Command sent when user clicks resume button.
-     */
-    record UserResume() implements Command {}
-
-    /**
-     * Command sent when user clicks stop button.
-     */
-    record UserStop() implements Command {}
-
-    /**
-     * Command sent when user changes parameters via sliders.
-     *
-     * @param cohesion cohesion factor
-     * @param alignment alignment factor
-     * @param separation separation factor
-     */
-    record UserUpdateParams(double cohesion, double alignment, double separation) implements Command {}
-
     /**
      * Confirmation that simulation has been paused.
      */
