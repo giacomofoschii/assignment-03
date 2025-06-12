@@ -286,17 +286,19 @@ public class GUIActor implements ChangeListener {
     }
 
     private void updateSlidersWithoutTriggering(double sep, double ali, double coh) {
-        separationSlider.removeChangeListener(this);
-        alignmentSlider.removeChangeListener(this);
-        cohesionSlider.removeChangeListener(this);
+        if (separationSlider != null && alignmentSlider != null && cohesionSlider != null) {
+            separationSlider.removeChangeListener(this);
+            alignmentSlider.removeChangeListener(this);
+            cohesionSlider.removeChangeListener(this);
 
-        separationSlider.setValue((int)(sep * 10));
-        alignmentSlider.setValue((int)(ali * 10));
-        cohesionSlider.setValue((int)(coh * 10));
+            separationSlider.setValue((int)(sep * 10));
+            alignmentSlider.setValue((int)(ali * 10));
+            cohesionSlider.setValue((int)(coh * 10));
 
-        separationSlider.addChangeListener(this);
-        alignmentSlider.addChangeListener(this);
-        cohesionSlider.addChangeListener(this);
+            separationSlider.addChangeListener(this);
+            alignmentSlider.addChangeListener(this);
+            cohesionSlider.addChangeListener(this);
+        }
     }
 
     private JSlider makeSlider() {
