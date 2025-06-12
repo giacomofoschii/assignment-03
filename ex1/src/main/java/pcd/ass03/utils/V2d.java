@@ -22,11 +22,11 @@ public record V2d(double x,double y) {
     }
 
     public double abs(){
-        return (double)Math.sqrt(x*x+y*y);
+        return Math.sqrt(x*x+y*y);
     }
 
     public V2d getNormalized(){
-        double module=(double)Math.sqrt(x*x+y*y);
+        double module= Math.sqrt(x*x+y*y);
         return new V2d(x/module,y/module);
     }
 
