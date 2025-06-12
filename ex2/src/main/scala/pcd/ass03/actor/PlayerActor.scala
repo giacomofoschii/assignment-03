@@ -1,8 +1,8 @@
 package pcd.ass03.actor
 
-import akka.actor.typed.receptionist._
 import akka.actor.typed._
 import akka.actor.typed.scaladsl._
+import akka.actor.typed.receptionist._
 import akka.actor.typed.scaladsl.AskPattern._
 import akka.util.Timeout
 
@@ -10,24 +10,28 @@ import scala.concurrent.duration._
 import scala.util.{Success, Failure}
 
 import pcd.ass03.distributed._
-import pcd.ass03.view.LocalView
 import pcd.ass03.model._
+import pcd.ass03.view.DistributedLocalView
 
 object PlayerActor:
   val PlayerServiceKey = ServiceKey[PlayerActorMessage]("PlayerActor")
+
+  private case class InitializeComplete(player: Player) extends PlayerActorMessage
+  private case object RegistrationFailed extends PlayerActorMessage
+  private case class ViewUpdateFailed(error: Throwable) extends PlayerActorMessage
   
   def apply(playerId: String, worldManager: ActorRef[WorldManagerMessage], isAI: Boolean = false):
     Behavior[PlayerActorMessage] =
       Behaviors.setup: context =>
         Behaviors.withStash(100): stash =>
           def initializing(): Behavior[PlayerActorMessage] =
-            implicit val timeout: Timeout = 3.seconds
             context.system.receptionist ! Receptionist.Register(PlayerServiceKey, context.self)
-            
+
+            implicit val timeout: Timeout = 3.seconds
             context.ask(worldManager, RegisterPlayer(playerId, _)):
               case Success(PlayerRegistered(player)) =>
                 InitializeComplete(player)
-              case Failure(_) =>
+              case Failure(ex) =>
                 RegistrationFailed
 
           Behaviors.receiveMessage:
@@ -42,30 +46,27 @@ object PlayerActor:
               stash.stash(other)
               Behaviors.same
 
-        def active(currentPlayer: Player, localView: Option[LocalView]): Behavior[PlayerActorMessage] =
+        def active(
+          currentPlayer: Player,
+          localView: Option[DistributedLocalView]
+        ): Behavior[PlayerActorMessage] =
           val view = localView match
             case Some(v) => Some(v)
             case None if !isAI =>
-              val mockWorld = World(Seq(currentPlayer), Seq.empty)
-              val mockManager = new MockGameStateManager(mockWorld, 10.0) {
-                override def movePlayerDirection(id: String, x: Double, y: Double): Unit =
-                  context.self ! MoveDirection(x, y)
-              }
-              val newView = new LocalView(mockManager, playerId)
+              val newView = new DistributedLocalView(playerId)
+              newView.setPlayerActor(context.self)
               Some(newView)
             case None => None
 
-          val timers = if isAI then
+          if isAI then
             Behaviors.withTimers[PlayerActorMessage]: timers =>
               timers.startTimerAtFixedRate("ai-movement", StartAI, 100.millis)
-              handleMessages(currentPlayer, view, Some(timers))
+              handleMessages(currentPlayer, view)
           else
-            handleMessages(currentPlayer, view, None)
+            handleMessages(currentPlayer, view)
 
-          timers
-
-        def handleMessages(currentPlayer: Player, localView: Option[LocalView],
-                           timers: Option[TimerScheduler[PlayerActorMessage]]): Behavior[PlayerActorMessage] =
+        def handleMessages(currentPlayer: Player, localView: Option[DistributedLocalView]): 
+        Behavior[PlayerActorMessage] =
           Behaviors.receiveMessage:
             case MoveDirection(dx,dy) =>
               val speed = 10.0
@@ -77,35 +78,30 @@ object PlayerActor:
 
               // Aggiorna stato locale
               val updatedPlayer = currentPlayer.copy(x = newX, y = newY)
-              handleMessages(updatedPlayer, localView, timers)
+              handleMessages(updatedPlayer, localView)
 
             case UpdateView(world) =>
-              localView.foreach: view =>
-                try
-                  view.updateWorld(world)
-                catch
-                  case ex: Exception =>
-                    context.log.error(s"Error updating view for $playerId", ex)
+              localView.foreach(_.updateWorld(world))
 
               // Aggiorna il player corrente con i dati dal mondo
               val updatedPlayer = world.playerById(playerId).getOrElse(currentPlayer)
-              handleMessages(updatedPlayer, localView, timers)
+              handleMessages(updatedPlayer, localView)
 
             case StartAI =>
+              implicit val timeout: Timeout = 3.seconds
               context.ask(worldManager, GetWorldState.apply):
                 case Success(WorldState(world)) =>
-                  AIMovement.nearestFood(playerId, world) match
-                    case Some(food) =>
-                      val dx = food.x - currentPlayer.x
-                      val dy = food.y - currentPlayer.y
-                      val distance = math.hypot(dx, dy)
+                  AIMovement.nearestFood(playerId, world).foreach: food =>
+                    val dx = food.x - currentPlayer.x
+                    val dy = food.y - currentPlayer.y
+                    val distance = math.hypot(dx, dy)
 
-                      if distance > 0 then
-                        // Normalizza direzione e invia comando movimento
-                        val normalizedDx = dx / distance
-                        val normalizedDy = dy / distance
-                        context.self ! MoveDirection(normalizedDx, normalizedDy)
-                    case None =>
+                    if distance > 0 then
+                      // Normalizza direzione e invia comando movimento
+                      val normalizedDx = dx / distance
+                      val normalizedDy = dy / distance
+                      context.self ! MoveDirection(normalizedDx, normalizedDy)
+                      
                   UpdateView(world) // Aggiorna anche la vista con i nuovi dati
 
                 case Failure(ex) =>
@@ -119,24 +115,12 @@ object PlayerActor:
             case InitializeComplete(_) | RegistrationFailed =>
               Behaviors.same
 
-        Behaviors
-          .receiveSignal:
-            case (context, PreRestart) =>
-              context.log.info(s"PlayerActor $playerId is restarting")
-              Behaviors.same
-
-            case (context, PostStop) =>
-              context.log.info(s"PlayerActor $playerId is stopping")
-              // Cleanup: deregistra dal Receptionist
-              context.system.receptionist ! Receptionist.Deregister(PlayerServiceKey, context.self)
-              // Notifica WorldManager che il player sta uscendo
-              worldManager ! UnregisterPlayer(playerId)
-              Behaviors.same
-          .narrow[PlayerActorMessage] // Assicura che il tipo sia corretto
-
-        initializing()
-  
-  private case class InitializeComplete(player: Player) extends PlayerActorMessage
-  private case object RegistrationFailed extends PlayerActorMessage
-  private case class ViewUpdateFailed(error: Throwable) extends PlayerActorMessage
-    
+        initializing().receiveSignal:
+          case (context, PostStop) =>
+            context.log.info(s"PlayerActor $playerId is stopping")
+            // Cleanup: deregistra dal Receptionist
+            context.system.receptionist ! Receptionist.Deregister(PlayerServiceKey, context.self)
+            // Notifica WorldManager che il player sta uscendo
+            worldManager ! UnregisterPlayer(playerId)
+            Behaviors.same
+ 
