@@ -2,7 +2,7 @@ package pcd.ass03.actor
 
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.Behaviors
-import akka.cluster.ddata.{LWWMap, LWWMapKey}
+import akka.cluster.ddata.{LWWMap, LWWMapKey, SelfUniqueAddress}
 import akka.cluster.ddata.typed.scaladsl.{DistributedData, Replicator}
 import pcd.ass03.distributed.Messages
 
@@ -19,6 +19,7 @@ object PlayerRegistry:
 
   def apply(): Behavior[Command] =
     Behaviors.setup: context =>
+      implicit val node: SelfUniqueAddress = DistributedData(context.system).selfUniqueAddress
       DistributedData.withReplicatorMessageAdapter[Command, LWWMap[String, String]]:
         replicator =>
           val PlayersKey = LWWMapKey[String, String]("players")
@@ -27,7 +28,7 @@ object PlayerRegistry:
             case AddPlayer(playerId, nodeId) =>
               replicator.askUpdate(
                 askReplyTo => Replicator.Update(PlayersKey, LWWMap.empty[String, String],
-                  Replicator.WriteLocal, askReplyTo)(_.put(context.system.address.toString, playerId, nodeId)),
+                  Replicator.WriteLocal, askReplyTo)(_.put(node, playerId, nodeId)),
                 InternalUpdateResponse.apply
               )
               Behaviors.same
@@ -35,7 +36,7 @@ object PlayerRegistry:
             case RemovePlayer(playerId) =>
               replicator.askUpdate(
                 askReplyTo => Replicator.Update(PlayersKey, LWWMap.empty[String, String],
-                  Replicator.WriteLocal, askReplyTo)(_.remove(context.system.address.toString, playerId)),
+                  Replicator.WriteLocal, askReplyTo)(_.remove(node, playerId)),
                 InternalUpdateResponse.apply
               )
               Behaviors.same
