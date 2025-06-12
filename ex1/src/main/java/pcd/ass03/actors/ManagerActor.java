@@ -133,6 +133,7 @@ public class ManagerActor {
         this.boidActors.clear();
         this.currentStates.clear();
         this.currentTick = 0;
+        this.guiActor = null;
 
         return create();
     }
@@ -151,10 +152,12 @@ public class ManagerActor {
         }
         lastFrameTime = currentMills;
 
-        guiActor.tell(new GUIProtocol.RenderFrame(
-                currentStates.values().stream().toList(),
-                new SimulationMetrics(boidActors.size(), fps, currentMills - cmd.tick())
-        ));
+        if (guiActor != null) {
+            guiActor.tell(new GUIProtocol.RenderFrame(
+                    currentStates.values().stream().toList(),
+                    new SimulationMetrics(boidActors.size(), fps, currentMills - cmd.tick())
+            ));
+        }
 
         return Behaviors.same();
     }
