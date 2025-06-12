@@ -173,6 +173,58 @@ public class BoidActorTest {
         );
     }
 
+    @Test
+    public void testIsolatedBoid() {
+        TestProbe<ManagerProtocol.Command> managerProbe = testKit.createTestProbe();
+        TestProbe<BarrierProtocol.Command> barrierProbe = testKit.createTestProbe();
+
+        P2d initialPos = new P2d(0, 0);
+        V2d initialVel = new V2d(1, 0);
+
+        ActorRef<BoidProtocol.Command> boid = testKit.spawn(
+                BoidActor.create("lonely-boid", initialPos, initialVel,
+                        params, managerProbe.ref(), barrierProbe.ref()),
+                "lonely-boid"
+        );
+
+        boid.tell(new BoidProtocol.UpdateRequest(1L, Collections.emptyList()));
+
+        ManagerProtocol.BoidUpdated update = managerProbe.expectMessageClass(
+                ManagerProtocol.BoidUpdated.class
+        );
+
+        assertEquals(initialVel.x(), update.velocity().x(), 0.01);
+        assertEquals(initialVel.y(), update.velocity().y(), 0.01);
+    }
+
+    @Test
+    public void testBoidProcessesMultipleUpdates() {
+        TestProbe<ManagerProtocol.Command> managerProbe = testKit.createTestProbe();
+        TestProbe<BarrierProtocol.Command> barrierProbe = testKit.createTestProbe();
+
+        ActorRef<BoidProtocol.Command> boid = testKit.spawn(
+                BoidActor.create("multi-update-boid", new P2d(0, 0), new V2d(1, 0),
+                        params, managerProbe.ref(), barrierProbe.ref()),
+                "multi-update-boid"
+        );
+
+        boid.tell(new BoidProtocol.UpdateRequest(1L, List.of()));
+        boid.tell(new BoidProtocol.UpdateRequest(2L, List.of()));
+
+        BarrierProtocol.BoidCompleted completion1 = barrierProbe.expectMessageClass(
+                BarrierProtocol.BoidCompleted.class
+        );
+        assertEquals(1L, completion1.tick());
+
+        BarrierProtocol.BoidCompleted completion2 = barrierProbe.expectMessageClass(
+                BarrierProtocol.BoidCompleted.class
+        );
+        assertEquals(2L, completion2.tick());
+
+        managerProbe.expectMessageClass(ManagerProtocol.BoidUpdated.class);
+        managerProbe.expectMessageClass(ManagerProtocol.BoidUpdated.class);
+    }
+
     private V2d calcSep(P2d pos, List<BoidState> neighbors, double avoidRadius) {
         double dx = 0;
         double dy = 0;
