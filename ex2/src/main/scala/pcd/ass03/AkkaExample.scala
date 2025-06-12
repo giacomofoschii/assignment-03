@@ -1,11 +1,12 @@
-package it.unibo.agar
+package pcd.ass03
 
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.Behaviors
+import pcd.ass03.distributed.Messages
 
 object PingPong:
 
-  sealed trait PingPongMessage extends Message
+  sealed trait PingPongMessage extends Messages
   case class Ping(ref: ActorRef[Pong]) extends PingPongMessage
   case class Pong(ref: ActorRef[Ping]) extends PingPongMessage
 

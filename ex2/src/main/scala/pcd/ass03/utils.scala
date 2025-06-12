@@ -1,4 +1,4 @@
-package it.unibo.agar
+package pcd.ass03
 
 import akka.actor.typed.{ActorSystem, Behavior}
 import com.typesafe.config.ConfigFactory

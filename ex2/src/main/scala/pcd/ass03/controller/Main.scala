@@ -1,7 +1,7 @@
-package it.unibo.agar.controller
+package pcd.ass03.controller
 
-import it.unibo.agar.model.{AIMovement, GameInitializer, MockGameStateManager, World}
-import it.unibo.agar.view.{GlobalView, LocalView}
+import pcd.ass03.model.{AIMovement, GameInitializer, MockGameStateManager, World}
+import pcd.ass03.view.{GlobalView, LocalView}
 
 import java.awt.Window
 import java.util.{Timer, TimerTask}

@@ -1,7 +1,6 @@
-package it.unibo.agar.view
+package pcd.ass03.view
 
-import it.unibo.agar.model.MockGameStateManager
-
+import pcd.ass03.model.MockGameStateManager
 import java.awt.{Color, Graphics2D}
 import scala.swing.*
 

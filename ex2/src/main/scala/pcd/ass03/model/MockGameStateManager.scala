@@ -1,4 +1,4 @@
-package it.unibo.agar.model
+package pcd.ass03.model
 
 trait GameStateManager:
 

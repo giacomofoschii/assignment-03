@@ -1,7 +1,6 @@
-package it.unibo.agar.view
+package pcd.ass03.view
 
-import it.unibo.agar.model.World
-
+import pcd.ass03.model.World
 import java.awt.{Color, Graphics2D}
 
 object AgarViewUtils:
