@@ -145,21 +145,13 @@ public class ManagerActor {
     private Behavior<ManagerProtocol.Command> onStop(ManagerProtocol.StopSimulation stopSimulation) {
         timers.cancelAll();
 
-        boidActors.values().forEach(this.context::stop);
-
-        if (barrierManager != null) {
-            this.context.stop(barrierManager);
-        }
-
         if (guiActor != null) {
             guiActor.tell(new GUIProtocol.ConfirmStop());
-            context.scheduleOnce(Duration.ofMillis(100), context.getSelf(), new DelayedStopGUI());
         }
 
-        this.boidActors.clear();
-        this.currentStates.clear();
-        this.currentTick = 0;
-        this.guiActor = null;
+        boidActors.values().forEach(this.context::stop);
+
+        context.scheduleOnce(Duration.ofMillis(100), context.getSelf(), new DelayedStopGUI());
 
         return stopping();
     }
@@ -167,12 +159,24 @@ public class ManagerActor {
     private Behavior<ManagerProtocol.Command> stopping() {
         return Behaviors.receive(ManagerProtocol.Command.class)
                 .onMessage(DelayedStopGUI.class, msg -> {
+                    if (barrierManager != null) {
+                        this.context.stop(barrierManager);
+                    }
+
                     if (guiActor != null) {
                         this.context.stop(guiActor);
                         this.guiActor = null;
                     }
+
+                    this.boidActors.clear();
+                    this.currentStates.clear();
+                    this.currentTick = 0;
+                    this.guiActor = null;
+
                     return create();
                 })
+                .onMessage(ManagerProtocol.BoidUpdated.class, msg -> Behaviors.same())
+                .onMessage(ManagerProtocol.UpdateCompleted.class, msg -> Behaviors.same())
                 .build();
     }
 

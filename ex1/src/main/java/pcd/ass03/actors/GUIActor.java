@@ -11,7 +11,6 @@ import java.util.*;
 import java.awt.*;
 
 public class GUIActor implements ChangeListener {
-    private final ActorContext<GUIProtocol.Command> context;
     private final ActorRef<ManagerProtocol.Command> managerActor;
     private final BoidsParams boidsParams;
 
@@ -24,10 +23,8 @@ public class GUIActor implements ChangeListener {
     private boolean isRunning = false;
     private boolean waitingForConfirmation = false;
 
-    private GUIActor(ActorContext<GUIProtocol.Command> context,
-                     BoidsParams boidsParams,
+    private GUIActor(BoidsParams boidsParams,
                      ActorRef<ManagerProtocol.Command> managerActor) {
-        this.context = context;
         this.boidsParams = boidsParams;
         this.managerActor = managerActor;
 
@@ -62,9 +59,7 @@ public class GUIActor implements ChangeListener {
                     boidsParams.getHeight()
             ));
 
-            SwingUtilities.invokeLater(() -> {
-                statusLabel.setText("Status: " + GUIProtocol.SimulationStatus.STARTING.getDisplayText());
-            });
+            SwingUtilities.invokeLater(() -> statusLabel.setText("Status: " + GUIProtocol.SimulationStatus.STARTING.getDisplayText()));
 
             isRunning = true;
             isPaused = false;
@@ -205,7 +200,7 @@ public class GUIActor implements ChangeListener {
     public static Behavior<GUIProtocol.Command> create(BoidsParams boidsParams,
                                                        ActorRef<ManagerProtocol.Command> managerActor) {
         return Behaviors.setup(ctx ->
-                Behaviors.supervise(new GUIActor(ctx, boidsParams, managerActor).behavior())
+                Behaviors.supervise(new GUIActor(boidsParams, managerActor).behavior())
                         .onFailure(SupervisorStrategy.restart()));
     }
 
@@ -237,30 +232,26 @@ public class GUIActor implements ChangeListener {
         this.boidsParams.setCohesionWeight(msg.cohesionWeight());
         this.boidsParams.setAlignmentWeight(msg.alignmentWeight());
 
-        SwingUtilities.invokeLater(() -> {
-            updateSlidersWIthoutTriggering(
+        SwingUtilities.invokeLater(() ->
+                updateSlidersWithoutTriggering(
                     msg.separationWeight(),
                     msg.alignmentWeight(),
                     msg.cohesionWeight()
-            );
-        });
+            )
+        );
 
         return Behaviors.same();
     }
 
     private Behavior<GUIProtocol.Command> onUpdateStatus(GUIProtocol.UpdateStatus msg) {
-        SwingUtilities.invokeLater(() -> {
-            statusLabel.setText("Status: " + msg.status().getDisplayText());
-        });
+        SwingUtilities.invokeLater(() -> statusLabel.setText("Status: " + msg.status().getDisplayText()));
         return Behaviors.same();
     }
 
     private Behavior<GUIProtocol.Command> onConfirmPause(GUIProtocol.ConfirmPause msg) {
         setWaitingState(false);
         this.isPaused = true;
-        SwingUtilities.invokeLater(() -> {
-            statusLabel.setText("Status: " + GUIProtocol.SimulationStatus.PAUSED.getDisplayText());
-        });
+        SwingUtilities.invokeLater(() -> statusLabel.setText("Status: " + GUIProtocol.SimulationStatus.PAUSED.getDisplayText()));
         updateButtonStates();
         return Behaviors.same();
     }
@@ -268,9 +259,7 @@ public class GUIActor implements ChangeListener {
     private Behavior<GUIProtocol.Command> onConfirmResume (GUIProtocol.ConfirmResume msg) {
         setWaitingState(false);
         this.isPaused = false;
-        SwingUtilities.invokeLater(() -> {
-            statusLabel.setText("Status: " + GUIProtocol.SimulationStatus.RESUMED.getDisplayText());
-        });
+        SwingUtilities.invokeLater(() -> statusLabel.setText("Status: " + GUIProtocol.SimulationStatus.RESUMED.getDisplayText()));
         updateButtonStates();
         return Behaviors.same();
     }
@@ -296,7 +285,7 @@ public class GUIActor implements ChangeListener {
         return Behaviors.same();
     }
 
-    private void updateSlidersWIthoutTriggering(double sep, double ali, double coh) {
+    private void updateSlidersWithoutTriggering(double sep, double ali, double coh) {
         separationSlider.removeChangeListener(this);
         alignmentSlider.removeChangeListener(this);
         cohesionSlider.removeChangeListener(this);
