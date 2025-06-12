@@ -67,4 +67,29 @@ public interface ManagerProtocol {
      * @param separation separation factor
      */
     record UpdateParams(double cohesion, double alignment, double separation) implements Command {}
+
+
+    /**
+     * Confirmation that simulation has been successfully paused.
+     * Sent back to GUI after processing PauseSimulation command.
+     */
+    record SimulationPaused() implements Command {}
+
+    /**
+     * Confirmation that simulation has been successfully resumed.
+     * Sent back to GUI after processing ResumeSimulation command.
+     */
+    record SimulationResumed() implements Command {}
+
+    /**
+     * Confirmation that simulation has been successfully stopped.
+     * Sent back to GUI after processing StopSimulation command.
+     */
+    record SimulationStopped() implements Command {}
+
+    /**
+     * Confirmation that parameters have been successfully updated.
+     * Sent back to GUI after processing UpdateParams command.
+     */
+    record ParamsUpdated() implements Command {}
 }
