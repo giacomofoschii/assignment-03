@@ -28,16 +28,6 @@ public interface BoidProtocol {
     }
 
     /**
-     * Command to retrieve the neighbors of a boid.
-     * This command is sent to the NeighborManager to get the boids within a certain radius.
-     *
-     * @param boidId the unique identifier of the boid
-     * @param neighbors the list of neighboring boids
-     */
-    record NeighborsInfo(String boidId, List<BoidState> neighbors) implements Command {
-    }
-
-    /**
      * Command to update the params for updating position of boids storm.
      *
      * @param params the new parameters for the updating logic

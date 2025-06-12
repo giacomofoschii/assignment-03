@@ -11,6 +11,27 @@ import java.util.List;
  */
 public interface GUIProtocol {
 
+    /**
+     * Enum representing possible simulation states.
+     */
+    enum SimulationStatus {
+        STARTING("Starting..."),
+        RUNNING("Running"),
+        PAUSED("Paused"),
+        STOPPED("Stopped"),
+        RESUMED("Running - Resumed");
+
+        private final String displayText;
+
+        SimulationStatus(String displayText) {
+            this.displayText = displayText;
+        }
+
+        public String getDisplayText() {
+            return displayText;
+        }
+    }
+
     interface Command {}
 
     /**
@@ -33,4 +54,31 @@ public interface GUIProtocol {
     record UpdateWeights(double separationWeight,
                          double alignmentWeight,
                          double cohesionWeight) implements Command {}
+
+    /**
+     * Confirmation that simulation has been paused.
+     */
+    record ConfirmPause() implements Command {}
+
+    /**
+     * Confirmation that simulation has been resumed.
+     */
+    record ConfirmResume() implements Command {}
+
+    /**
+     * Confirmation that simulation has been stopped.
+     */
+    record ConfirmStop() implements Command {}
+
+    /**
+     * Confirmation that parameters have been updated.
+     */
+    record ConfirmParamsUpdate() implements Command {}
+
+    /**
+     * Update GUI with current simulation status.
+     *
+     * @param status the current status (RUNNING, PAUSED, STOPPED, etc.)
+     */
+    record UpdateStatus(SimulationStatus status) implements Command {}
 }

@@ -89,8 +89,18 @@ public class ManagerActor {
             this.currentStates.put(id, new BoidState(initialPos, initialVel, id));
         }
 
-        guiActor.tell(new GUIProtocol.RenderFrame(this.currentStates.values().stream().toList(),
-                new SimulationMetrics(cmd.nBoids(), FPS, TICK_NUMBER)));
+        guiActor.tell(new GUIProtocol.UpdateWeights(
+                boidsParams.getSeparationWeight(),
+                boidsParams.getAlignmentWeight(),
+                boidsParams.getCohesionWeight()
+        ));
+
+        guiActor.tell(new GUIProtocol.RenderFrame(
+                this.currentStates.values().stream().toList(),
+                new SimulationMetrics(cmd.nBoids(), FPS, TICK_NUMBER)
+        ));
+
+        guiActor.tell(new GUIProtocol.UpdateStatus(GUIProtocol.SimulationStatus.RUNNING));
 
         // Schedule the first tick
         timers.startTimerAtFixedRate(new ManagerProtocol.Tick(), Duration.ofMillis(TICK_NUMBER));
@@ -113,12 +123,22 @@ public class ManagerActor {
     private Behavior<ManagerProtocol.Command> onResume(ManagerProtocol.ResumeSimulation resumeSimulation) {
         // Restart the timer
         timers.startTimerAtFixedRate(new ManagerProtocol.Tick(), Duration.ofMillis(TICK_NUMBER));
+
+        if (guiActor != null) {
+            guiActor.tell(new GUIProtocol.ConfirmResume());
+        }
+
         return running();
     }
 
     private Behavior<ManagerProtocol.Command> onPause(ManagerProtocol.PauseSimulation pauseSimulation) {
         // Stop the timer
         timers.cancel(new ManagerProtocol.Tick());
+
+        if(guiActor != null) {
+            guiActor.tell(new GUIProtocol.ConfirmPause());
+        }
+
         return paused();
     }
 
@@ -127,15 +147,33 @@ public class ManagerActor {
 
         boidActors.values().forEach(this.context::stop);
 
-        this.context.stop(barrierManager);
-        this.context.stop(guiActor);
+        if (barrierManager != null) {
+            this.context.stop(barrierManager);
+        }
+
+        if (guiActor != null) {
+            guiActor.tell(new GUIProtocol.ConfirmStop());
+            context.scheduleOnce(Duration.ofMillis(100), context.getSelf(), new DelayedStopGUI());
+        }
 
         this.boidActors.clear();
         this.currentStates.clear();
         this.currentTick = 0;
         this.guiActor = null;
 
-        return create();
+        return stopping();
+    }
+
+    private Behavior<ManagerProtocol.Command> stopping() {
+        return Behaviors.receive(ManagerProtocol.Command.class)
+                .onMessage(DelayedStopGUI.class, msg -> {
+                    if (guiActor != null) {
+                        this.context.stop(guiActor);
+                        this.guiActor = null;
+                    }
+                    return create();
+                })
+                .build();
     }
 
     private Behavior<ManagerProtocol.Command> onUpdateCompleted(ManagerProtocol.UpdateCompleted cmd) {
@@ -165,7 +203,6 @@ public class ManagerActor {
     private Behavior<ManagerProtocol.Command> onBoidUpdated(ManagerProtocol.BoidUpdated boidUpdated) {
         String boidId = boidUpdated.boidId();
         currentStates.put(boidId, new BoidState(boidUpdated.position(), boidUpdated.velocity(), boidId));
-
         return Behaviors.same();
     }
 
@@ -191,6 +228,15 @@ public class ManagerActor {
             boidActor.tell(new BoidProtocol.UpdateParams(boidsParams));
         }
 
+        if (guiActor != null) {
+            guiActor.tell(new GUIProtocol.UpdateWeights(
+                    boidsParams.getSeparationWeight(),
+                    boidsParams.getAlignmentWeight(),
+                    boidsParams.getCohesionWeight()
+            ));
+            guiActor.tell(new GUIProtocol.ConfirmParamsUpdate());
+        }
+
         return Behaviors.same();
     }
 
@@ -204,4 +250,7 @@ public class ManagerActor {
                 .onMessage(ManagerProtocol.Tick.class, msg -> Behaviors.same())
                 .build();
     }
+
+    // Internal command to delay the stop of the GUI actor
+    private static class DelayedStopGUI implements ManagerProtocol.Command {}
 }
