@@ -1,22 +1,22 @@
 package pcd.ass03.actor
 
 import akka.actor.typed.receptionist.Receptionist
-import akka.actor.typed.scaladsl.*
-import akka.cluster.typed.*
+import akka.actor.typed.scaladsl._
+import akka.cluster.typed._
 import akka.actor.typed.{ActorRef, Behavior, SupervisorStrategy}
 import akka.util.Timeout
 import com.typesafe.config.Config
 
-import scala.concurrent.duration.*
+import scala.concurrent.duration._
 import scala.util.{Failure, Success}
 import scala.util.Random
-import pcd.ass03.distributed.{AteFood, AtePlayer, FoodList, GetAllFood, GetWorldState, PlayerRegistered, RegisterPlayer, RemoveFood, Tick, UnregisterPlayer, UpdatePlayerPosition, WorldManagerMessage, WorldState}
+import pcd.ass03.distributed._
 import pcd.ass03.actor.{FoodManager, PlayerActor}
 import pcd.ass03.model.{EatingManager, Food, Player, World}
 
 object WorldManager:
-  case class UpdateFood(foods: Seq[Food]) extends WorldManagerMessage
-  case object NoOp extends WorldManagerMessage
+  private case class UpdateFood(foods: Seq[Food]) extends WorldManagerMessage
+  private case object NoOp extends WorldManagerMessage
   
   def apply(config: Config): Behavior[WorldManagerMessage] =
     Behaviors.supervise(worldManagerBehavior(config)).onFailure(SupervisorStrategy.restart)
@@ -88,13 +88,17 @@ object WorldManager:
         def checkCollisions(player: Player, context: ActorContext[WorldManagerMessage]): Unit =
           world.foods.filter(food => EatingManager.canEatFood(player, food)).foreach: food =>
             context.self ! AteFood(player.id, food.id)
-          world.playersExcludingSelf(player).filter(other => EatingManager.canEatPlayer(player, other))
-            .foreach: other => context.self ! AtePlayer(player.id, other.id)
+          world.playersExcludingSelf(player)
+            .filter(other => EatingManager.canEatPlayer(player, other))
+            .foreach:
+              other => context.self ! AtePlayer(player.id, other.id)
 
         def broadcastWorldState(context: ActorContext[WorldManagerMessage]): Unit =
+          implicit val timeout: Timeout = 3.seconds
           val receptionist = context.system.receptionist
-          context.ask(receptionist, Receptionist.Find(PlayerActor.PlayerServiceKey, _))
-          case Success(listing) =>
-            listing.instances.foreach(_ ! UpdateView(world))
-            NoOp
-          case _ => NoOp
+          context.ask(receptionist, Receptionist.Find(PlayerActor.PlayerServiceKey, _)):
+            case Success(listing: Receptionist.Listing) =>
+              listing.serviceInstances(PlayerActor.PlayerServiceKey).foreach:
+                _ ! UpdateView(world)
+              NoOp
+            case _ => NoOp

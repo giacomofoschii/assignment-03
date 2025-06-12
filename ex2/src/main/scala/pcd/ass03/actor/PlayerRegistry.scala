@@ -2,8 +2,8 @@ package pcd.ass03.actor
 
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.Behaviors
-import akka.cluster.ddata.{LWWMap, LWWMapKey, Replicator}
-import akka.cluster.ddata.typed.scaladsl.DistributedData
+import akka.cluster.ddata.{LWWMap, LWWMapKey}
+import akka.cluster.ddata.typed.scaladsl.{DistributedData, Replicator}
 import pcd.ass03.distributed.Messages
 
 object PlayerRegistry:
@@ -52,7 +52,7 @@ object PlayerRegistry:
 
             case InternalGetResponse(rsp, replyTo) =>
               rsp match
-                case res @ Replicator.GetSuccess(PlayersKey) =>
+                case res: Replicator.GetSuccess[LWWMap[String, String]] =>
                   val map = res.get(PlayersKey).entries
                   replyTo ! PlayersMap(map)
                 case _ =>

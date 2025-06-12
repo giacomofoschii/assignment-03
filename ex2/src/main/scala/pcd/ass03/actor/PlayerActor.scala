@@ -3,7 +3,7 @@ package pcd.ass03.actor
 import akka.actor.typed.receptionist._
 import akka.actor.typed._
 import akka.actor.typed.scaladsl._
-import akka.actor.typed.scaladsl.AskPattern.*
+import akka.actor.typed.scaladsl.AskPattern._
 import akka.util.Timeout
 
 import scala.concurrent.duration._
@@ -19,30 +19,24 @@ object PlayerActor:
   def apply(playerId: String, worldManager: ActorRef[WorldManagerMessage], isAI: Boolean = false):
     Behavior[PlayerActorMessage] =
       Behaviors.setup: context =>
-        context.log.info(s"Starting PlayerActor for $playerId (AI: $isAI)")
-
         Behaviors.withStash(100): stash =>
           def initializing(): Behavior[PlayerActorMessage] =
-            context.log.debug(s"PlayerActor $playerId in initializing state")
-
+            implicit val timeout: Timeout = 3.seconds
             context.system.receptionist ! Receptionist.Register(PlayerServiceKey, context.self)
+            
             context.ask(worldManager, RegisterPlayer(playerId, _)):
               case Success(PlayerRegistered(player)) =>
-                context.log.info(s"Player $playerId succesfully registered")
                 InitializeComplete(player)
-              case Failure(ex) =>
-                context.log.error(s"Failed to register plyer $playerId", ex)
+              case Failure(_) =>
                 RegistrationFailed
 
           Behaviors.receiveMessage:
             case InitializeComplete(player) =>
-              context.log.debug(s"Player $playerId initialization complete")
               stash.unstashAll(active(player, None))
 
             case RegistrationFailed =>
-              context.log.error(s"Registration failed for $playerId, stopping")
               context.system.receptionist ! Receptionist.Deregister(PlayerServiceKey, context.self)
-              Behaviors.stopped()
+              Behaviors.stopped
 
             case other =>
               stash.stash(other)
@@ -52,8 +46,12 @@ object PlayerActor:
           val view = localView match
             case Some(v) => Some(v)
             case None if !isAI =>
-              val newView = new LocalView(playerId)
-              newView.setPlayerActor(context.self)
+              val mockWorld = World(Seq(currentPlayer), Seq.empty)
+              val mockManager = new MockGameStateManager(mockWorld, 10.0) {
+                override def movePlayerDirection(id: String, x: Double, y: Double): Unit =
+                  context.self ! MoveDirection(x, y)
+              }
+              val newView = new LocalView(mockManager, playerId)
               Some(newView)
             case None => None
 
@@ -67,7 +65,7 @@ object PlayerActor:
           timers
 
         def handleMessages(currentPlayer: Player, localView: Option[LocalView],
-                           timers: Option[TimerScheduler[PlayerActorMessages]]): Behavior[PlayerActorMessages] =
+                           timers: Option[TimerScheduler[PlayerActorMessage]]): Behavior[PlayerActorMessage] =
           Behaviors.receiveMessage:
             case MoveDirection(dx,dy) =>
               val speed = 10.0
@@ -136,7 +134,6 @@ object PlayerActor:
               Behaviors.same
           .narrow[PlayerActorMessage] // Assicura che il tipo sia corretto
 
-        // Inizia con la fase di inizializzazione
         initializing()
   
   private case class InitializeComplete(player: Player) extends PlayerActorMessage
