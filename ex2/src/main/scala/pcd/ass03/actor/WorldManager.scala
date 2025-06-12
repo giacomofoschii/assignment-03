@@ -3,7 +3,7 @@ package pcd.ass03.actor
 import akka.actor.typed.receptionist.Receptionist
 import akka.actor.typed.scaladsl.*
 import akka.cluster.typed.*
-import akka.actor.typed.{ActorRef, Behavior}
+import akka.actor.typed.{ActorRef, Behavior, SupervisorStrategy}
 import akka.util.Timeout
 import com.typesafe.config.Config
 
@@ -19,17 +19,20 @@ object WorldManager:
   case object NoOp extends WorldManagerMessage
   
   def apply(config: Config): Behavior[WorldManagerMessage] =
+    Behaviors.supervise(worldManagerBehavior(config)).onFailure(SupervisorStrategy.restart)
+    
+  private def worldManagerBehavior(config: Config): Behavior[WorldManagerMessage] =
     Behaviors.setup: context =>
       Behaviors.withTimers: timers =>
         val width = config.getInt("game.world.width")
         val height = config.getInt("game.world.height")
         var world = World(width, height, Seq.empty, Seq.empty)
-        
+
         timers.startTimerAtFixedRate(Tick, 30.millis)
-        
+
         val foodManager = ClusterSingleton(context.system)
           .init(SingletonActor(FoodManager(config), "FoodManager"))
-          
+
         Behaviors.receiveMessage:
           case RegisterPlayer(playerId, replyTo) =>
             context.log.info(s"Registering player $playerId")
@@ -68,29 +71,30 @@ object WorldManager:
                 val grownKiller = killer.grow(victim)
                 world = world.updatePlayer(grownKiller).removePlayers(Seq(victim))
               case _ =>
-              Behaviors.same
+                Behaviors.same
+            Behaviors.same
 
           case Tick =>
             implicit val timeout: Timeout = 3.seconds
             context.ask(foodManager, GetAllFood.apply):
-                  case Success(FoodList(foods)) =>
-                    UpdateFood(foods)
-                  case _ =>
-                    NoOp
-     
+              case Success(FoodList(foods)) =>
+                UpdateFood(foods)
+              case _ =>
+                NoOp
+
             broadcastWorldState(context)
             Behaviors.same
-            
+
         def checkCollisions(player: Player, context: ActorContext[WorldManagerMessage]): Unit =
-          world.foods.filter(food => EatingManager.canEatFood(player, food)).foreach : food =>
+          world.foods.filter(food => EatingManager.canEatFood(player, food)).foreach: food =>
             context.self ! AteFood(player.id, food.id)
           world.playersExcludingSelf(player).filter(other => EatingManager.canEatPlayer(player, other))
             .foreach: other => context.self ! AtePlayer(player.id, other.id)
-            
+
         def broadcastWorldState(context: ActorContext[WorldManagerMessage]): Unit =
           val receptionist = context.system.receptionist
           context.ask(receptionist, Receptionist.Find(PlayerActor.PlayerServiceKey, _))
-            case Success(listing) =>
-              listing.instances.foreach(_ ! UpdateView(world))
-              NoOp
-            case _ => NoOp
+          case Success(listing) =>
+            listing.instances.foreach(_ ! UpdateView(world))
+            NoOp
+          case _ => NoOp
