@@ -194,10 +194,6 @@ public class ManagerActor {
         }
 
         completedBoids = 0;
-        for(ActorRef<BoidProtocol.Command> boidActor : boidActors.values()) {
-            boidActor.tell(new BoidProtocol.UpdateRequest(currentTick,
-                    currentStates.values().stream().toList()));
-        }
 
         return Behaviors.same();
     }
@@ -206,6 +202,9 @@ public class ManagerActor {
         String boidId = boidUpdated.boidId();
         completedBoids ++;
         currentStates.put(boidId, new BoidState(boidUpdated.position(), boidUpdated.velocity(), boidId));
+        if(completedBoids >= boidActors.size()) {
+            this.context.getSelf().tell(new ManagerProtocol.UpdateCompleted(currentTick));
+        }
 
         return Behaviors.same();
     }
@@ -213,8 +212,11 @@ public class ManagerActor {
     private Behavior<ManagerProtocol.Command> onTick(ManagerProtocol.Tick tick) {
         currentTick++;
 
-        if(completedBoids >= boidActors.size()) {
-            this.context.getSelf().tell(new ManagerProtocol.UpdateCompleted(currentTick));
+        if(completedBoids == 0) {
+            for (ActorRef<BoidProtocol.Command> boidActor : boidActors.values()) {
+                boidActor.tell(new BoidProtocol.UpdateRequest(currentTick,
+                        currentStates.values().stream().toList()));
+            }
         }
 
         return Behaviors.same();
