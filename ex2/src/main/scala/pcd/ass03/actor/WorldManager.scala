@@ -35,6 +35,17 @@ object WorldManager:
           SingletonActor(FoodManager(config), "FoodManager")
         )
 
+        def checkCollisions(player: Player, context: ActorContext[WorldManagerMessage]): Unit =
+          // Check food collisions
+          world.foods.filter(food => EatingManager.canEatFood(player, food)).foreach: food =>
+            context.self ! AteFood(player.id, food.id)
+
+          // Check player collisions
+          world.playersExcludingSelf(player)
+            .filter(other => EatingManager.canEatPlayer(player, other))
+            .foreach: other =>
+              context.self ! AtePlayer(player.id, other.id)
+
         Behaviors.receiveMessage:
           case RegisterPlayer(playerId, replyTo) =>
             context.log.info(s"Registering player $playerId")
@@ -79,8 +90,9 @@ object WorldManager:
               case (Some(killer), Some(victim)) =>
                 val grownKiller = killer.grow(victim)
                 world = world.updatePlayer(grownKiller).removePlayers(Seq(victim))
-              case _ => // Ignore
-            Behaviors.same
+                Behaviors.same
+              case _ => 
+                Behaviors.same// Ignore
 
           case Tick =>
             // Aggiorna cibo
@@ -92,7 +104,14 @@ object WorldManager:
                 NoOp
 
             // Broadcast stato mondo
-            broadcastWorldState(context)
+            context.ask(context.system.receptionist, Receptionist.Find(PlayerActor.PlayerServiceKey, _)):
+              case Success(listing: Receptionist.Listing) =>
+                listing.serviceInstances(PlayerActor.PlayerServiceKey).foreach: actorRef =>
+                  actorRef ! UpdateView(world)
+                NoOp
+              case Failure(_) =>
+                NoOp
+
             Behaviors.same
 
           case UpdateFood(foods) =>
@@ -101,24 +120,4 @@ object WorldManager:
 
           case NoOp =>
             Behaviors.same
-
-        def checkCollisions(player: Player, context: ActorContext[WorldManagerMessage]): Unit =
-          // Check food collisions
-          world.foods.filter(food => EatingManager.canEatFood(player, food)).foreach: food =>
-            context.self ! AteFood(player.id, food.id)
-
-          // Check player collisions
-          world.playersExcludingSelf(player)
-            .filter(other => EatingManager.canEatPlayer(player, other))
-            .foreach: other =>
-              context.self ! AtePlayer(player.id, other.id)
-
-        def broadcastWorldState(context: ActorContext[WorldManagerMessage]): Unit =
-          implicit val timeout: akka.util.Timeout = 100.millis
-          context.ask(context.system.receptionist, Receptionist.Find(PlayerActor.PlayerServiceKey, _)):
-            case Success(listing: Receptionist.Listing) =>
-              listing.serviceInstances(PlayerActor.PlayerServiceKey).foreach: actorRef =>
-                actorRef ! UpdateView(world)
-              NoOp
-            case Failure(_) =>
-              NoOp
+  
