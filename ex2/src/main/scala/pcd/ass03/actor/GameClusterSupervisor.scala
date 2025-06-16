@@ -22,22 +22,26 @@ object GameClusterSupervisor:
     Behaviors.setup[ClusterCommand]: context =>
       val cluster = Cluster(context.system)
 
-      ClusterSingleton(context.system).init(
-        SingletonActor(
-          Behaviors
-            .supervise(WorldManager(context.system.settings.config))
-            .onFailure[Exception](SupervisorStrategy.restart),
-          "WorldManager")
-      )
-      
-      ClusterSingleton(context.system).init(
-        SingletonActor(
-          Behaviors
-            .supervise(FoodManager(context.system.settings.config))
-            .onFailure[Exception](SupervisorStrategy.restart),
-          "FoodManager"
+      if cluster.selfMember.roles.contains("server") then
+        context.log.info("Initializing cluster singletons on server node")
+        ClusterSingleton(context.system).init(
+          SingletonActor(
+            Behaviors
+              .supervise(WorldManager(context.system.settings.config))
+              .onFailure[Exception](SupervisorStrategy.restart),
+            "WorldManager")
         )
-      )
+      
+        ClusterSingleton(context.system).init(
+          SingletonActor(
+            Behaviors
+              .supervise(FoodManager(context.system.settings.config))
+              .onFailure[Exception](SupervisorStrategy.restart),
+            "FoodManager"
+          )
+        )
+      else 
+        context.log.info("Client node")
 
       context.spawn(
         Behaviors

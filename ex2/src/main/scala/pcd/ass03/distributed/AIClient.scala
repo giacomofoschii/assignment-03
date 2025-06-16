@@ -18,12 +18,21 @@ object AIClient extends App:
   
   val system = ActorSystem(GameClusterSupervisor(), "agario", config)
   
-  val worldManager = ClusterSingleton(system).init(
+  Thread.sleep(3000)
+  
+  val worldManagerProxy = ClusterSingleton(system).init(
     SingletonActor(WorldManager(config), "WorldManager")
   )
 
   (1 to numAI).foreach: i =>
-    system.systemActorOf(PlayerActor(s"AI-$i", worldManager, isAI = true), s"AI-Player-$i")
+    system.systemActorOf(PlayerActor(s"AI-$i", worldManagerProxy, isAI = true), s"AI-Player-$i")
     
   println(s"Spawned $numAI AI players")
+  
+  // Shutdown hook to gracefully terminate the system
+  sys.addShutdownHook {
+    println("Shutting down AI client...")
+    system.terminate()
+  }
+  
   Thread.sleep(Long.MaxValue)
