@@ -11,6 +11,7 @@ import scala.concurrent.duration._
 object GameClusterSupervisor:
   trait ClusterCommand
   private case class MemberEventWrapper(event: MemberEvent) extends ClusterCommand
+  private case class ReachabilityEventWrapper(event: ReachabilityEvent) extends ClusterCommand
 
   def apply(): Behavior[Nothing] =
     Behaviors
@@ -51,8 +52,10 @@ object GameClusterSupervisor:
       )
 
       val memberEventAdapter =  context.messageAdapter[MemberEvent](MemberEventWrapper.apply)
+      val reachabilityEventAdapter = context.messageAdapter[ReachabilityEvent](ReachabilityEventWrapper.apply)
       
       cluster.subscriptions ! Subscribe(memberEventAdapter, classOf[MemberEvent])
+      cluster.subscriptions ! Subscribe(reachabilityEventAdapter, classOf[ReachabilityEvent])
       
       Behaviors.receiveMessage:
         case MemberEventWrapper(MemberUp(member)) =>
@@ -63,13 +66,16 @@ object GameClusterSupervisor:
           context.log.info(s"Member is Removed: ${member.address} after $previousStatus")
           Behaviors.same
 
-        case MemberEventWrapper(UnreachableMember(member)) =>
+        case MemberEventWrapper(_) =>
+          Behaviors.same
+
+        case ReachabilityEventWrapper(UnreachableMember(member)) =>
           context.log.warn(s"Member detected as unreachable: ${member.address}")
           Behaviors.same
 
-        case MemberEventWrapper(ReachableMember(member)) =>
+        case ReachabilityEventWrapper(ReachableMember(member)) =>
           context.log.info(s"Member is reachable again: ${member.address}")
           Behaviors.same
 
-        case MemberEventWrapper(_) =>
+        case ReachabilityEventWrapper(_) =>
           Behaviors.same
