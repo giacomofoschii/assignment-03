@@ -28,6 +28,13 @@ public interface BoidProtocol {
     }
 
     /**
+     * Command to wait for an update from the Manager actor.
+     *
+     * @param tick the current tick of the simulation
+     */
+    record WaitUpdateRequest(long tick) implements Command {}
+
+    /**
      * Command to update the params for updating position of boids storm.
      *
      * @param params the new parameters for the updating logic

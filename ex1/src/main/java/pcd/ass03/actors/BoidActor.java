@@ -10,34 +10,34 @@ import java.util.List;
 
 public class BoidActor {
     private final String boidId;
+    private final ActorContext<BoidProtocol.Command> context;
     private final ActorRef<ManagerProtocol.Command> managerActor;
-    private final ActorRef<BarrierProtocol.Command> barrierActor;
     private P2d position;
     private V2d velocity;
     private BoidsParams params;
 
     public BoidActor(String boidId, P2d initialPos, V2d initialVel, BoidsParams params,
-                     ActorRef<ManagerProtocol.Command> managerActor, ActorRef<BarrierProtocol.Command> barrierActor) {
+                     ActorRef<ManagerProtocol.Command> managerActor, ActorContext<BoidProtocol.Command> context) {
         this.boidId = boidId;
         this.position = initialPos;
         this.velocity = initialVel;
         this.params = params;
+        this.context = context;
         this.managerActor = managerActor;
-        this.barrierActor = barrierActor;
     }
 
     public static Behavior<BoidProtocol.Command> create(String boidId, P2d initialPos, V2d initialVel,
                                                         BoidsParams params,
-                                                        ActorRef<ManagerProtocol.Command> managerActor,
-                                                        ActorRef<BarrierProtocol.Command> barrierActor) {
+                                                        ActorRef<ManagerProtocol.Command> managerActor) {
         return Behaviors.setup(context -> new BoidActor(boidId, initialPos, initialVel,
-                                                        params, managerActor, barrierActor).behavior());
+                                                        params, managerActor, context).behavior());
     }
 
     private Behavior<BoidProtocol.Command> behavior() {
         return Behaviors.receive(BoidProtocol.Command.class)
             .onMessage(BoidProtocol.UpdateRequest.class, this::onUpdateRequest)
             .onMessage(BoidProtocol.UpdateParams.class, this::onUpdateParams)
+            .onMessage(BoidProtocol.WaitUpdateRequest.class, this::onWaitUpdateRequest)
             .build();
     }
 
@@ -74,9 +74,16 @@ public class BoidActor {
         if (position.y() >= params.getMaxY()) position = position.sum(new V2d(0, -params.getHeight()));
 
         managerActor.tell(new ManagerProtocol.BoidUpdated(position, velocity, boidId));
-        barrierActor.tell(new BarrierProtocol.BoidCompleted(boidId, request.tick()));
+        this.context.getSelf().tell(new BoidProtocol.WaitUpdateRequest(request.tick()));
 
         return Behaviors.same();
+    }
+
+    private Behavior<BoidProtocol.Command> onWaitUpdateRequest(BoidProtocol.WaitUpdateRequest msg) {
+        return Behaviors.receive(BoidProtocol.Command.class)
+                .onMessage(BoidProtocol.UpdateRequest.class, this::onUpdateRequest)
+                .onMessage(BoidProtocol.UpdateParams.class, this::onUpdateParams)
+                .build();
     }
 
     private List<BoidState> findNearby(List<BoidState> boids) {
