@@ -31,21 +31,21 @@ object PlayerActor:
             implicit val timeout: Timeout = 3.seconds
             context.ask(worldManager, RegisterPlayer(playerId, _)) {
               case Success(PlayerRegistered(player)) =>
-                context.log.info(s"Player $playerId successfully registered")
+                println(s"Player $playerId successfully registered")
                 InitializeComplete(player)
               case Failure(ex) =>
-                context.log.error(s"Failed to register player $playerId", ex)
+                println(s"Failed to register player $playerId")
                 RegistrationFailed
             }
 
             Behaviors
               .receiveMessage[PlayerActorMessage] {
                 case InitializeComplete(player) =>
-                  context.log.debug(s"Player $playerId initialization complete")
+                  println(s"Player $playerId initialization complete")
                   stash.unstashAll(active(player, None))
   
                 case RegistrationFailed =>
-                  context.log.error(s"Registration failed for player $playerId")
+                  println(s"Registration failed for player $playerId")
                   context.system.receptionist ! Receptionist.Deregister(PlayerServiceKey, context.self)
                   Behaviors.stopped
   
@@ -55,7 +55,7 @@ object PlayerActor:
               }
               .receiveSignal {
                 case (context, PostStop) =>
-                  context.log.info(s"PlayerActor $playerId is stopping")
+                  println(s"PlayerActor $playerId is stopping")
                   context.system.receptionist ! Receptionist.Deregister(PlayerServiceKey, context.self)
                   worldManager ! UnregisterPlayer(playerId)
                   Behaviors.same

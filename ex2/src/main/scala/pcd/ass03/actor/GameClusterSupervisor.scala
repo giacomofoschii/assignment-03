@@ -23,7 +23,7 @@ object GameClusterSupervisor:
       val cluster = Cluster(context.system)
 
       if cluster.selfMember.roles.contains("server") then
-        context.log.info("Initializing cluster singletons on server node")
+        println("Initializing cluster singletons on server node")
         ClusterSingleton(context.system).init(
           SingletonActor(
             Behaviors
@@ -41,7 +41,7 @@ object GameClusterSupervisor:
           )
         )
       else
-        context.log.info("Client node")
+        println("Client node initialized")
 
       context.spawn(
         Behaviors
@@ -58,20 +58,20 @@ object GameClusterSupervisor:
 
       Behaviors.receiveMessage:
         case MemberEventWrapper(MemberUp(member)) =>
-          context.log.info(s"Member is Up: ${member.address}")
+          println(s"Member is Up: ${member.address}")
           Behaviors.same
 
         case MemberEventWrapper(MemberRemoved(member, previousStatus)) =>
-          context.log.info(s"Member is Removed: ${member.address} after $previousStatus")
+          println(s"Member is Removed: ${member.address} after $previousStatus")
           Behaviors.same
 
         case MemberEventWrapper(_) =>
           Behaviors.same
 
         case ReachabilityEventWrapper(UnreachableMember(member)) =>
-          context.log.warn(s"Member detected as unreachable: ${member.address}")
+          println(s"Member detected as unreachable: ${member.address}")
           Behaviors.same
 
         case ReachabilityEventWrapper(ReachableMember(member)) =>
-          context.log.info(s"Member is reachable again: ${member.address}")
+          println(s"Member is reachable again: ${member.address}")
           Behaviors.same

@@ -15,6 +15,7 @@ import pcd.ass03.model._
 object WorldManager:
   private case class UpdateFood(foods: Seq[Food]) extends WorldManagerMessage
   private case object NoOp extends WorldManagerMessage
+  private case object InitializeFoodManager extends WorldManagerMessage
 
   def apply(config: Config): Behavior[WorldManagerMessage] =
     Behaviors.supervise(worldManagerBehavior(config))
@@ -22,16 +23,16 @@ object WorldManager:
 
   private def worldManagerBehavior(config: Config): Behavior[WorldManagerMessage] =
     Behaviors.setup: context =>
-      context.log.info("Starting WorldManager")
+      println("Starting WorldManager")
 
       Behaviors.withTimers: timers =>
         val width = config.getInt("game.world.width")
         val height = config.getInt("game.world.height")
         var world = World(width, height, Seq.empty, Seq.empty)
 
-        timers.startTimerAtFixedRate(Tick, 30.millis)
+        timers.startSingleTimer(InitializeFoodManager, 2.seconds)
 
-        val foodManager = ClusterSingleton(context.system).init(
+        val foodManagerProxy = ClusterSingleton(context.system).init(
           SingletonActor(FoodManager(config), "FoodManager")
         )
 
@@ -47,8 +48,13 @@ object WorldManager:
               context.self ! AtePlayer(player.id, other.id)
 
         Behaviors.receiveMessage:
+          case InitializeFoodManager =>
+            // Avvia il timer Tick solo dopo l'inizializzazione
+            timers.startTimerAtFixedRate(Tick, 50.millis) // Rallentato un po'
+            Behaviors.same
+            
           case RegisterPlayer(playerId, replyTo) =>
-            context.log.info(s"Registering player $playerId")
+            println(s"Registering player $playerId")
             val player = Player(
               playerId,
               Random.nextInt(width),
@@ -60,7 +66,7 @@ object WorldManager:
             Behaviors.same
 
           case UnregisterPlayer(playerId) =>
-            context.log.info(s"Unregistering player $playerId")
+            println(s"Unregistering player $playerId")
             world = world.copy(players = world.players.filterNot(_.id == playerId))
             Behaviors.same
 
@@ -82,7 +88,7 @@ object WorldManager:
                 world = world.updatePlayer(grownPlayer).copy(
                   foods = world.foods.filterNot(_.id == foodId)
                 )
-                foodManager ! RemoveFood(foodId)
+                foodManagerProxy ! RemoveFood(foodId)
             Behaviors.same
 
           case AtePlayer(killerId, victimId) =>
@@ -97,7 +103,7 @@ object WorldManager:
           case Tick =>
             // Aggiorna cibo
             implicit val timeout: akka.util.Timeout = 100.millis
-            context.ask(foodManager, GetAllFood.apply):
+            context.ask(foodManagerProxy, GetAllFood.apply):
               case Success(FoodList(foods)) =>
                 UpdateFood(foods)
               case Failure(_) =>
