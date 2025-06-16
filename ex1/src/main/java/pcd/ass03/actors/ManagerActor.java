@@ -16,11 +16,11 @@ public class ManagerActor {
     private static final AtomicInteger VERSION = new AtomicInteger(0);
 
     private final ActorContext<ManagerProtocol.Command> context;
-    private ActorRef<BarrierProtocol.Command> barrierManager;
     private ActorRef<GUIProtocol.Command> guiActor;
     private final TimerScheduler<ManagerProtocol.Command> timers;
     private final Map<String, BoidState> currentStates = new HashMap<>();
     private final Map<String, ActorRef<BoidProtocol.Command>> boidActors = new HashMap<>();
+    private int completedBoids;
     private final BoidsParams boidsParams;
     private long currentTick;
     private long lastFrameTime;
@@ -32,6 +32,7 @@ public class ManagerActor {
         this.boidsParams = new BoidsParams(800,800);
         this.currentTick = 0;
         this.lastFrameTime = 0;
+        this.completedBoids = 0;
     }
 
     public static Behavior<ManagerProtocol.Command> create() {
@@ -61,12 +62,6 @@ public class ManagerActor {
         double width = cmd.width();
         double height = cmd.height();
 
-        barrierManager = context.spawn(
-                Behaviors.supervise(BarrierActor.create(nBoids, this.context.getSelf()))
-                        .onFailure(SupervisorStrategy.restart()),
-                "barrier-actor" + VERSION.get()
-        );
-
         // Create Boid actors
         for (int i = 0; i < nBoids; i++) {
             String id = "boid-" + i;
@@ -79,7 +74,7 @@ public class ManagerActor {
 
             ActorRef<BoidProtocol.Command> boidRef = context.spawn(
                     Behaviors.supervise(BoidActor.create(id, initialPos, initialVel, boidsParams,
-                                    this.context.getSelf(), barrierManager))
+                                    this.context.getSelf()))
                             .onFailure(SupervisorStrategy.restartWithBackoff(
                                     Duration.ofMillis(100), Duration.ofSeconds(1), 0.2f)
                                     .withResetBackoffAfter(Duration.ofSeconds(10))),
@@ -121,6 +116,8 @@ public class ManagerActor {
     }
 
     private Behavior<ManagerProtocol.Command> onResume(ManagerProtocol.ResumeSimulation resumeSimulation) {
+        completedBoids = 0;
+
         // Restart the timer
         timers.startTimerAtFixedRate(new ManagerProtocol.Tick(), Duration.ofMillis(TICK_NUMBER));
 
@@ -159,24 +156,16 @@ public class ManagerActor {
     private Behavior<ManagerProtocol.Command> stopping() {
         return Behaviors.receive(ManagerProtocol.Command.class)
                 .onMessage(DelayedStopGUI.class, msg -> {
-                    if (barrierManager != null) {
-                        this.context.stop(barrierManager);
-                    }
 
                     if (guiActor != null) {
                         this.context.stop(guiActor);
-                        this.guiActor = null;
                     }
-
-                    this.boidActors.clear();
-                    this.currentStates.clear();
-                    this.currentTick = 0;
-                    this.guiActor = null;
 
                     return create();
                 })
                 .onMessage(ManagerProtocol.BoidUpdated.class, msg -> Behaviors.same())
                 .onMessage(ManagerProtocol.UpdateCompleted.class, msg -> Behaviors.same())
+                .onMessage(ManagerProtocol.Tick.class, msg -> Behaviors.same())
                 .build();
     }
 
@@ -201,23 +190,30 @@ public class ManagerActor {
             ));
         }
 
+        completedBoids = 0;
+
         return Behaviors.same();
     }
 
     private Behavior<ManagerProtocol.Command> onBoidUpdated(ManagerProtocol.BoidUpdated boidUpdated) {
         String boidId = boidUpdated.boidId();
+        completedBoids ++;
         currentStates.put(boidId, new BoidState(boidUpdated.position(), boidUpdated.velocity(), boidId));
+        if(completedBoids >= boidActors.size()) {
+            this.context.getSelf().tell(new ManagerProtocol.UpdateCompleted(currentTick));
+        }
+
         return Behaviors.same();
     }
 
     private Behavior<ManagerProtocol.Command> onTick(ManagerProtocol.Tick tick) {
         currentTick++;
 
-        barrierManager.tell(new BarrierProtocol.StartPhase(currentTick));
-
-        List<BoidState> states = new ArrayList<>(currentStates.values());
-        for(ActorRef<BoidProtocol.Command> boidActor : boidActors.values()) {
-            boidActor.tell(new BoidProtocol.UpdateRequest(currentTick, states));
+        if(completedBoids == 0) {
+            for (ActorRef<BoidProtocol.Command> boidActor : boidActors.values()) {
+                boidActor.tell(new BoidProtocol.UpdateRequest(currentTick,
+                        currentStates.values().stream().toList()));
+            }
         }
 
         return Behaviors.same();

@@ -128,7 +128,7 @@ public class BoidActorTest {
 
         ActorRef<BoidProtocol.Command> boid = testKit.spawn(
                 BoidActor.create("test-boid", initialPos, initialVel,
-                        params, managerProde.ref(), barrierProbe.ref()),
+                        params, managerProde.ref()),
                 "test-boid-actor"
         );
 
@@ -161,11 +161,10 @@ public class BoidActorTest {
     @Test
     public void testBoidParameterUpdate() {
         TestProbe<ManagerProtocol.Command> managerProbe = testKit.createTestProbe();
-        TestProbe<BarrierProtocol.Command> barrierProbe = testKit.createTestProbe();
 
         ActorRef<BoidProtocol.Command> boid = testKit.spawn(
                 BoidActor.create("param-test-boid", new P2d(0, 0), new V2d(1, 0),
-                        params, managerProbe.ref(), barrierProbe.ref()),
+                        params, managerProbe.ref()),
                 "param-test-boid"
         );
 
@@ -206,14 +205,12 @@ public class BoidActorTest {
     @Test
     public void testBoidWraparound() {
         TestProbe<ManagerProtocol.Command> managerProbe = testKit.createTestProbe();
-        TestProbe<BarrierProtocol.Command> barrierProbe = testKit.createTestProbe();
-
         P2d edgePos = new P2d(params.getMaxX() - 1, 0);
         V2d rightVel = new V2d(5, 0);
 
         ActorRef<BoidProtocol.Command> boid = testKit.spawn(
                 BoidActor.create("edge-boid", edgePos, rightVel,
-                        params, managerProbe.ref(), barrierProbe.ref()),
+                        params, managerProbe.ref()),
                 "edge-boid"
         );
 
@@ -233,14 +230,13 @@ public class BoidActorTest {
     @Test
     public void testIsolatedBoid() {
         TestProbe<ManagerProtocol.Command> managerProbe = testKit.createTestProbe();
-        TestProbe<BarrierProtocol.Command> barrierProbe = testKit.createTestProbe();
 
         P2d initialPos = new P2d(0, 0);
         V2d initialVel = new V2d(1, 0);
 
         ActorRef<BoidProtocol.Command> boid = testKit.spawn(
                 BoidActor.create("lonely-boid", initialPos, initialVel,
-                        params, managerProbe.ref(), barrierProbe.ref()),
+                        params, managerProbe.ref()),
                 "lonely-boid"
         );
 
@@ -261,7 +257,7 @@ public class BoidActorTest {
 
         ActorRef<BoidProtocol.Command> boid = testKit.spawn(
                 BoidActor.create("multi-update-boid", new P2d(0, 0), new V2d(1, 0),
-                        params, managerProbe.ref(), barrierProbe.ref()),
+                        params, managerProbe.ref()),
                 "multi-update-boid"
         );
 
@@ -294,8 +290,7 @@ public class BoidActorTest {
                         new P2d(params.getWidth()/2, params.getHeight()/2),
                         new V2d(1, 0),
                         params,
-                        managerProbe.ref(),
-                        barrierProbe.ref()
+                        managerProbe.ref()
                 )
         );
 
