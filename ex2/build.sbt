@@ -1,3 +1,5 @@
+import sbtassembly.AssemblyPlugin.autoImport._
+
 ThisBuild / version := "0.1.0-SNAPSHOT"
 
 ThisBuild / scalaVersion := "3.3.6"
@@ -19,3 +21,7 @@ lazy val root = (project in file("."))
       "com.typesafe.akka" %% "akka-actor-typed" % "2.8.8"
     )
   )
+  .enablePlugins(AssemblyPlugin)
+
+Compile / mainClass := Some("pcd.ass03.controller.Main")
+assembly / mainClass := Some("pcd.ass03.controller.Main")

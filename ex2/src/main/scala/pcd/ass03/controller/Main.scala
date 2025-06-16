@@ -1,35 +1,53 @@
 package pcd.ass03.controller
 
-import pcd.ass03.model.{AIMovement, GameInitializer, MockGameStateManager, World}
-import pcd.ass03.view.GlobalView
+import pcd.ass03.distributed._
 
-import java.awt.Window
-import java.util.{Timer, TimerTask}
-import scala.swing.*
-import scala.swing.Swing.onEDT
+import scala.io.StdIn
 
-object Main extends SimpleSwingApplication:
+object Main:
+  def main(args: Array[String]): Unit =
+    if args.isEmpty then
+      println("Usage: DistributedMain <mode> [options]")
+      println("Modes:")
+      println("  server              - Start the game server")
+      println("  client <name>       - Start a player client")
+      println("  ai <count>          - Start AI players")
+      println("  all                 - Start server + 3 AI + wait for client")
+      System.exit(1)
+      
+    args(0).toLowerCase match
+      case "server" =>
+        GameServer.main(Array.empty)
 
-  private val width = 1000
-  private val height = 1000
-  private val numPlayers = 4
-  private val numFoods = 100
-  private val players = GameInitializer.initialPlayers(numPlayers, width, height)
-  private val foods = GameInitializer.initialFoods(numFoods, width, height)
-  private val manager = new MockGameStateManager(World(width, height, players, foods))
+      case "client" =>
+        val name = if args.length > 1 then args(1) else {
+          println("Please provide a player name")
+          StdIn.readLine()
+        }
+        GameClient.main(Array(name))
 
-  private val timer = new Timer()
-  private val task: TimerTask = new TimerTask:
-    override def run(): Unit =
-      AIMovement.moveAI("p1", manager)
-      manager.tick()
-      onEDT(Window.getWindows.foreach(_.repaint()))
-  timer.scheduleAtFixedRate(task, 0, 30) // every 30ms
+      case "ai" =>
+        val count = if args.length > 1 then args(1) else "3"
+        AIClient.main(Array(count))
 
-  override def top: Frame =
-    // Open both views at startup
-    new GlobalView(manager).open()
-    new LocalView(manager, "p1").open()
-    new LocalView(manager, "p2").open()
-    // No launcher window, just return an empty frame (or null if allowed)
-    new Frame { visible = false }
+      case "all" =>
+        val serverThread = new Thread(() => GameServer.main(Array.empty))
+        serverThread.start()
+
+        // Aspetta che il server si avvii
+        Thread.sleep(3000)
+
+        // Avvia AI
+        val aiThread = new Thread(() => AIClient.main(Array("3")))
+        aiThread.start()
+
+        Thread.sleep(2000)
+
+        // Avvia client interattivo
+        println("Server and AI players started. Press ENTER to start a human player...")
+        StdIn.readLine()
+        GameClient.main(Array.empty)
+
+      case _ =>
+        println(s"Unknown mode: ${args(0)}")
+        System.exit(1)
