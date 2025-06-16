@@ -33,7 +33,6 @@ object AIClient:
 
     // Shutdown hook to gracefully terminate the system
     sys.addShutdownHook {
-      println("Shutting down AI client...")
       system.terminate()
     }
 

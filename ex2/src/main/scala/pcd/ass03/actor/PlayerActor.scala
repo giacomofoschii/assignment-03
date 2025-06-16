@@ -55,7 +55,6 @@ object PlayerActor:
               }
               .receiveSignal {
                 case (context, PostStop) =>
-                  println(s"PlayerActor $playerId is stopping")
                   context.system.receptionist ! Receptionist.Deregister(PlayerServiceKey, context.self)
                   worldManager ! UnregisterPlayer(playerId)
                   Behaviors.same

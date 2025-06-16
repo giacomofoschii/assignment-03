@@ -16,6 +16,7 @@ object WorldManager:
   private case class UpdateFood(foods: Seq[Food]) extends WorldManagerMessage
   private case object NoOp extends WorldManagerMessage
   private case object InitializeFoodManager extends WorldManagerMessage
+  private case class PlayersUpdate(player: Set[ActorRef[PlayerActorMessage]]) extends WorldManagerMessage
 
   def apply(config: Config): Behavior[WorldManagerMessage] =
     Behaviors.supervise(worldManagerBehavior(config))
@@ -29,6 +30,7 @@ object WorldManager:
         val width = config.getInt("game.world.width")
         val height = config.getInt("game.world.height")
         var world = World(width, height, Seq.empty, Seq.empty)
+        var registeredPlayers = Set.empty[ActorRef[PlayerActorMessage]]
 
         timers.startSingleTimer(InitializeFoodManager, 2.seconds)
 
@@ -52,7 +54,7 @@ object WorldManager:
             // Avvia il timer Tick solo dopo l'inizializzazione
             timers.startTimerAtFixedRate(Tick, 50.millis) // Rallentato un po'
             Behaviors.same
-            
+
           case RegisterPlayer(playerId, replyTo) =>
             println(s"Registering player $playerId")
             val player = Player(
@@ -112,9 +114,17 @@ object WorldManager:
             // Broadcast stato mondo
             context.ask(context.system.receptionist, Receptionist.Find(PlayerActor.PlayerServiceKey, _)):
               case Success(listing: Receptionist.Listing) =>
-                listing.serviceInstances(PlayerActor.PlayerServiceKey).foreach: actorRef =>
-                  actorRef ! UpdateView(world)
-                NoOp
+                val activePlayers = listing.serviceInstances(PlayerActor.PlayerServiceKey)
+                registeredPlayers = activePlayers
+                activePlayers.foreach: actorRef =>
+                  val playerStillExist = world.players.exists(p =>
+                    actorRef.path.name.contains(p.id) ||
+                    actorRef.path.name == s"Player-${p.id}" ||
+                    actorRef.path.name == s"AI-Player-${p.id}")
+                  if playerStillExist then
+                    actorRef ! UpdateView(world)
+
+                PlayersUpdate(activePlayers)
               case Failure(_) =>
                 NoOp
 
@@ -122,6 +132,10 @@ object WorldManager:
 
           case UpdateFood(foods) =>
             world = world.copy(foods = foods)
+            Behaviors.same
+
+          case PlayersUpdate(players) =>
+            registeredPlayers = players
             Behaviors.same
 
           case NoOp =>

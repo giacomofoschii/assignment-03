@@ -8,9 +8,9 @@ import pcd.ass03.distributed.Messages
 
 object PlayerRegistry:
   trait Command extends Messages
-  case class AddPlayer(playerId: String, nodeId: String) extends Command
-  case class RemovePlayer(playerId: String) extends Command
-  case class GetPlayers(replyTo: ActorRef[PlayersMap]) extends Command
+  private case class AddPlayer(playerId: String, nodeId: String) extends Command
+  private case class RemovePlayer(playerId: String) extends Command
+  private case class GetPlayers(replyTo: ActorRef[PlayersMap]) extends Command
   case class PlayersMap(players: Map[String, String]) extends Messages
   
   private case class InternalUpdateResponse(rsp: Replicator.UpdateResponse[LWWMap[String, String]]) extends Command
