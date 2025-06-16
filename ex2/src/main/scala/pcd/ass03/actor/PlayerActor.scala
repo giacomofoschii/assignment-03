@@ -14,7 +14,7 @@ import pcd.ass03.model._
 import pcd.ass03.view.DistributedLocalView
 
 object PlayerActor:
-  val PlayerServiceKey = ServiceKey[PlayerActorMessage]("PlayerActor")
+  val PlayerServiceKey: ServiceKey[PlayerActorMessage] = ServiceKey[PlayerActorMessage]("PlayerActor")
 
   private case class InitializeComplete(player: Player) extends PlayerActorMessage
   private case object RegistrationFailed extends PlayerActorMessage

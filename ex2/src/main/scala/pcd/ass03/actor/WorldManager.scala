@@ -91,7 +91,7 @@ object WorldManager:
                 val grownKiller = killer.grow(victim)
                 world = world.updatePlayer(grownKiller).removePlayers(Seq(victim))
                 Behaviors.same
-              case _ => 
+              case _ =>
                 Behaviors.same// Ignore
 
           case Tick =>
@@ -120,4 +120,3 @@ object WorldManager:
 
           case NoOp =>
             Behaviors.same
-  

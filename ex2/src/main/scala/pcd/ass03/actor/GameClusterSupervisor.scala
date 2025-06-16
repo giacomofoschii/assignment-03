@@ -4,12 +4,11 @@ import akka.actor.typed._
 import akka.actor.typed.scaladsl._
 import akka.cluster.typed._
 import akka.cluster.ClusterEvent._
-import akka.cluster.typed.{Cluster, Subscribe}
 
 import scala.concurrent.duration._
 
 object GameClusterSupervisor:
-  trait ClusterCommand
+  private trait ClusterCommand
   private case class MemberEventWrapper(event: MemberEvent) extends ClusterCommand
   private case class ReachabilityEventWrapper(event: ReachabilityEvent) extends ClusterCommand
 
@@ -41,7 +40,7 @@ object GameClusterSupervisor:
             "FoodManager"
           )
         )
-      else 
+      else
         context.log.info("Client node")
 
       context.spawn(
@@ -53,10 +52,10 @@ object GameClusterSupervisor:
 
       val memberEventAdapter =  context.messageAdapter[MemberEvent](MemberEventWrapper.apply)
       val reachabilityEventAdapter = context.messageAdapter[ReachabilityEvent](ReachabilityEventWrapper.apply)
-      
+
       cluster.subscriptions ! Subscribe(memberEventAdapter, classOf[MemberEvent])
       cluster.subscriptions ! Subscribe(reachabilityEventAdapter, classOf[ReachabilityEvent])
-      
+
       Behaviors.receiveMessage:
         case MemberEventWrapper(MemberUp(member)) =>
           context.log.info(s"Member is Up: ${member.address}")
@@ -75,7 +74,4 @@ object GameClusterSupervisor:
 
         case ReachabilityEventWrapper(ReachableMember(member)) =>
           context.log.info(s"Member is reachable again: ${member.address}")
-          Behaviors.same
-
-        case ReachabilityEventWrapper(_) =>
           Behaviors.same
