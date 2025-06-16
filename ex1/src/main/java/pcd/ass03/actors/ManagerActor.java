@@ -157,18 +157,13 @@ public class ManagerActor {
 
                     if (guiActor != null) {
                         this.context.stop(guiActor);
-                        this.guiActor = null;
                     }
-
-                    this.boidActors.clear();
-                    this.currentStates.clear();
-                    this.currentTick = 0;
-                    this.guiActor = null;
 
                     return create();
                 })
                 .onMessage(ManagerProtocol.BoidUpdated.class, msg -> Behaviors.same())
                 .onMessage(ManagerProtocol.UpdateCompleted.class, msg -> Behaviors.same())
+                .onMessage(ManagerProtocol.Tick.class, msg -> Behaviors.same())
                 .build();
     }
 
