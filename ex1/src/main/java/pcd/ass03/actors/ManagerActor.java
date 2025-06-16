@@ -116,6 +116,8 @@ public class ManagerActor {
     }
 
     private Behavior<ManagerProtocol.Command> onResume(ManagerProtocol.ResumeSimulation resumeSimulation) {
+        completedBoids = 0;
+
         // Restart the timer
         timers.startTimerAtFixedRate(new ManagerProtocol.Tick(), Duration.ofMillis(TICK_NUMBER));
 
