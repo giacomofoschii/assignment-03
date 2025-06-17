@@ -70,12 +70,12 @@ object PlayerActor:
             if isAI then
               Behaviors.withTimers[PlayerActorMessage] : timers =>
                 timers.startTimerAtFixedRate("ai-movement", StartAI, HundredMillis)
-                handleMessages(currentPlayer, view)
+                handleMessages(currentPlayer, view, timers)
             else
-              handleMessages(currentPlayer, view)
+              handleMessages(currentPlayer, view, null)
 
-          def handleMessages(currentPlayer: Player, localView: Option[DistributedLocalView]):
-          Behavior[PlayerActorMessage] =
+          def handleMessages(currentPlayer: Player, localView: Option[DistributedLocalView],
+                             timers: TimerScheduler[PlayerActorMessage]): Behavior[PlayerActorMessage] =
             Behaviors.receiveMessage[PlayerActorMessage] :
               case MoveDirection(dx, dy) =>
                 val speed = DefaultSpeed
@@ -87,25 +87,26 @@ object PlayerActor:
 
                 // Update the local state
                 val updatedPlayer = currentPlayer.copy(x = newX, y = newY)
-                handleMessages(updatedPlayer, localView)
+                handleMessages(updatedPlayer, localView, timers)
 
               case UpdateView(world) =>
                 localView.foreach(_.updateWorld(world))
                 // Update the current player with data from the world
                 val updatedPlayer = world.playerById(playerId).getOrElse(currentPlayer)
-                handleMessages(updatedPlayer, localView)
+                handleMessages(updatedPlayer, localView, timers)
 
               case PlayerDied(id) if id == playerId =>
-                println(s"Player $playerId has been eaten!")
+                if isAI && timers != null then
+                  timers.cancel("ai-movement") // Stop AI movement timer on death
 
                 if isAI then
-                  Behaviors.withTimers[PlayerActorMessage] { timers =>
-                    timers.startSingleTimer("respawn", Respawn, FiveSeconds)
-                    waitingForRespawn(localView, worldManager)
+                  Behaviors.withTimers[PlayerActorMessage] { respawnTimers =>
+                    respawnTimers.startSingleTimer("respawn", Respawn, FiveSeconds)
+                    waitingForRespawn(localView, worldManager, isAI)
                   }
                 else
                   localView.foreach(_.showRespawnDialog())
-                  waitingForRespawn(localView, worldManager)
+                  waitingForRespawn(localView, worldManager, isAI)
 
               case StartAI =>
                 implicit val timeout: Timeout = ThreeSeconds
@@ -135,19 +136,22 @@ object PlayerActor:
               case InitializeComplete(_) | RegistrationFailed =>
                 Behaviors.same
 
-          def waitingForRespawn(localView: Option[DistributedLocalView], worldManager: ActorRef[WorldManagerMessage]):
-          Behavior[PlayerActorMessage] =
+              case PlayerDied(_) =>
+                Behaviors.same
+
+              case Respawn =>
+                Behaviors.same
+
+          def waitingForRespawn(localView: Option[DistributedLocalView], worldManager: ActorRef[WorldManagerMessage],
+                                isAI: Boolean): Behavior[PlayerActorMessage] =
             Behaviors.receiveMessage :
               case Respawn =>
-                println(s"Player $playerId respawning...")
                 implicit val timeout: Timeout = ThreeSeconds
                 context.ask(worldManager, RegisterPlayer(playerId, _)) :
                   case Success(PlayerRegistered(player)) =>
-                    println(s"Player $playerId respawned successfully")
                     localView.foreach(_.setActive(true))
                     InitializeComplete(player)
                   case _ =>
-                    println(s"Failed to respawn player $playerId")
                     RegistrationFailed
 
                 Behaviors.same
@@ -161,6 +165,12 @@ object PlayerActor:
 
               case PlayerDied(_) =>
                 Behaviors.same // Ignore further death messages while waiting to respawn
+
+              case StartAI =>
+                Behaviors.same
+
+              case MoveDirection(_, _) =>
+                Behaviors.same
 
               case other =>
                 println(s"Unexpected message while waiting for respawn: $other")
