@@ -83,7 +83,7 @@ public class BoidActor {
         return Behaviors.receive(BoidProtocol.Command.class)
                 .onMessage(BoidProtocol.UpdateRequest.class, this::onUpdateRequest)
                 .onMessage(BoidProtocol.UpdateParams.class, this::onUpdateParams)
-                .onMessage(BoidProtocol.WaitUpdateRequest.class, this::onWaitUpdateRequest)
+                .onMessage(BoidProtocol.WaitUpdateRequest.class,  waitMsg -> Behaviors.same())
                 .build();
     }
 

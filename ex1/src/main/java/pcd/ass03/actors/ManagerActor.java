@@ -121,6 +121,10 @@ public class ManagerActor {
         // Restart the timer
         timers.startTimerAtFixedRate(new ManagerProtocol.Tick(), Duration.ofMillis(TICK_NUMBER));
 
+        boidActors.values().forEach(boidActor ->
+                boidActor.tell(new BoidProtocol.UpdateRequest(currentTick,
+                        currentStates.values().stream().toList())));
+
         if (guiActor != null) {
             guiActor.tell(new GUIProtocol.ConfirmResume());
         }
@@ -131,6 +135,9 @@ public class ManagerActor {
     private Behavior<ManagerProtocol.Command> onPause(ManagerProtocol.PauseSimulation pauseSimulation) {
         // Stop the timer
         timers.cancel(new ManagerProtocol.Tick());
+
+        boidActors.values().forEach(boidActor ->
+                boidActor.tell(new BoidProtocol.WaitUpdateRequest(currentTick)));
 
         if(guiActor != null) {
             guiActor.tell(new GUIProtocol.ConfirmPause());
@@ -245,7 +252,7 @@ public class ManagerActor {
                 .onMessage(ManagerProtocol.ResumeSimulation.class, this::onResume)
                 .onMessage(ManagerProtocol.StopSimulation.class, this::onStop)
                 .onMessage(ManagerProtocol.UpdateParams.class, this::onUpdateParams)
-                .onMessage(ManagerProtocol.BoidUpdated.class, this::onBoidUpdated)
+                .onMessage(ManagerProtocol.BoidUpdated.class, msg -> Behaviors.same())
                 .onMessage(ManagerProtocol.UpdateCompleted.class, msg -> Behaviors.same())
                 .onMessage(ManagerProtocol.Tick.class, msg -> Behaviors.same())
                 .build();

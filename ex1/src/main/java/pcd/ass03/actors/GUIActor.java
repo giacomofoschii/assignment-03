@@ -19,9 +19,6 @@ public class GUIActor implements ChangeListener {
     private JSlider cohesionSlider, separationSlider, alignmentSlider;
     private JButton resumeButton, pauseButton, stopButton;
     private JLabel statusLabel;
-    private boolean isPaused = false;
-    private boolean isRunning = false;
-    private boolean waitingForConfirmation = false;
 
     private GUIActor(BoidsParams boidsParams,
                      ActorRef<ManagerProtocol.Command> managerActor) {
@@ -61,9 +58,6 @@ public class GUIActor implements ChangeListener {
 
             SwingUtilities.invokeLater(() -> statusLabel.setText("Status: " + GUIProtocol.SimulationStatus.STARTING.getDisplayText()));
 
-            isRunning = true;
-            isPaused = false;
-            updateButtonStates();
         } else {
             if (frame == null) {
                 System.exit(0);
@@ -139,7 +133,7 @@ public class GUIActor implements ChangeListener {
         frame.setLocationRelativeTo(null);
         frame.setVisible(true);
 
-        updateButtonStates();
+        updateButtonStates(true, false, true);
     }
 
     private void updateGUIForRestart(int nBoids) {
@@ -147,53 +141,6 @@ public class GUIActor implements ChangeListener {
             boidsPanel.setNBoids(nBoids);
             boidsPanel.updateBoids(new ArrayList<>());
             boidsPanel.repaint();
-        }
-    }
-
-    private void updateButtonStates() {
-        SwingUtilities.invokeLater(() -> {
-            if (this.pauseButton != null && this.resumeButton != null && this.stopButton != null) {
-                if (waitingForConfirmation) {
-                    this.pauseButton.setEnabled(false);
-                    this.resumeButton.setEnabled(false);
-                    this.stopButton.setEnabled(false);
-                } else if (!isRunning) {
-                    this.pauseButton.setEnabled(false);
-                    this.resumeButton.setEnabled(false);
-                    this.stopButton.setEnabled(false);
-                } else if (isPaused) {
-                    this.pauseButton.setEnabled(false);
-                    this.resumeButton.setEnabled(true);
-                    this.stopButton.setEnabled(true);
-                } else {
-                    this.pauseButton.setEnabled(true);
-                    this.resumeButton.setEnabled(false);
-                    this.stopButton.setEnabled(true);
-                }
-            }
-        });
-    }
-
-    private void setWaitingState(boolean waiting) {
-        this.waitingForConfirmation = waiting;
-        updateButtonStates();
-    }
-
-    private void onStop() {
-        if (isRunning && !waitingForConfirmation) {
-            setWaitingState(true);
-            managerActor.tell(new ManagerProtocol.StopSimulation());
-        }
-    }
-
-    private void onPauseResume() {
-        if(isRunning && !waitingForConfirmation) {
-            setWaitingState(true);
-            if (isPaused) {
-                managerActor.tell(new ManagerProtocol.ResumeSimulation());
-            } else {
-                managerActor.tell(new ManagerProtocol.PauseSimulation());
-            }
         }
     }
 
@@ -205,15 +152,92 @@ public class GUIActor implements ChangeListener {
     }
 
     private Behavior<GUIProtocol.Command> behavior() {
+        return waitingForStart();
+    }
+
+    private Behavior<GUIProtocol.Command> waitingForStart() {
+        return Behaviors.receive(GUIProtocol.Command.class)
+                .onMessage(GUIProtocol.UpdateStatus.class, msg -> {
+                    if(msg.status() == GUIProtocol.SimulationStatus.RUNNING) {
+                        updateButtonStates(true, false, true);
+                        return running();
+                    }
+                    return Behaviors.same();
+                })
+                .onMessage(GUIProtocol.UpdateWeights.class, this::onUpdateWeights)
+                .onMessage(GUIProtocol.RenderFrame.class, this::onRenderFrame)
+                .build();
+    }
+
+    private Behavior<GUIProtocol.Command> running() {
         return Behaviors.receive(GUIProtocol.Command.class)
                 .onMessage(GUIProtocol.RenderFrame.class, this::onRenderFrame)
                 .onMessage(GUIProtocol.UpdateWeights.class, this::onUpdateWeights)
                 .onMessage(GUIProtocol.UpdateStatus.class, this::onUpdateStatus)
-                .onMessage(GUIProtocol.ConfirmPause.class, this::onConfirmPause)
-                .onMessage(GUIProtocol.ConfirmResume.class, this::onConfirmResume)
-                .onMessage(GUIProtocol.ConfirmStop.class, this::onConfirmStop)
+                .onMessage(GUIProtocol.ConfirmPause.class, msg -> {
+                    SwingUtilities.invokeLater(() -> {
+                        statusLabel.setText("Status: " + GUIProtocol.SimulationStatus.PAUSED.getDisplayText());
+                        updateButtonStates(false, true, true);
+                    });
+                    return paused();
+                })
+                .onMessage(GUIProtocol.ConfirmStop.class, msg -> {
+                    SwingUtilities.invokeLater(() -> {
+                        statusLabel.setText("Status: " + GUIProtocol.SimulationStatus.STOPPED.getDisplayText());
+                        frame.dispose();
+                    });
+                    return stopped();
+                })
                 .onMessage(GUIProtocol.ConfirmParamsUpdate.class, this::onConfirmParamsUpdate)
                 .build();
+    }
+
+    private Behavior<GUIProtocol.Command> paused() {
+        return Behaviors.receive(GUIProtocol.Command.class)
+                .onMessage(GUIProtocol.UpdateWeights.class, this::onUpdateWeights)
+                .onMessage(GUIProtocol.ConfirmResume.class, msg -> {
+                    SwingUtilities.invokeLater(() -> {
+                        statusLabel.setText("Status: " + GUIProtocol.SimulationStatus.RESUMED.getDisplayText());
+                        updateButtonStates(true, false, true);
+                    });
+                    return running();
+                })
+                .onMessage(GUIProtocol.ConfirmStop.class, msg -> {
+                    SwingUtilities.invokeLater(() -> {
+                        statusLabel.setText("Status: " + GUIProtocol.SimulationStatus.STOPPED.getDisplayText());
+                        frame.dispose();
+                    });
+                    return stopped();
+                })
+                .onMessage(GUIProtocol.ConfirmParamsUpdate.class, this::onConfirmParamsUpdate)
+                .build();
+    }
+
+    private Behavior<GUIProtocol.Command> stopped() {
+        return Behaviors.stopped();
+    }
+
+    private void updateButtonStates(boolean pauseEnabled, boolean resumeEnabled, boolean stopEnabled) {
+        SwingUtilities.invokeLater(() -> {
+            if (this.pauseButton != null && this.resumeButton != null && this.stopButton != null) {
+                this.pauseButton.setEnabled(pauseEnabled);
+                this.resumeButton.setEnabled(resumeEnabled);
+                this.stopButton.setEnabled(stopEnabled);
+            }
+        });
+    }
+
+    private void onStop() {
+        updateButtonStates(false, false, false);
+        managerActor.tell(new ManagerProtocol.StopSimulation());
+    }
+
+    private void onPauseResume() {
+        if(pauseButton.isEnabled()) {
+            managerActor.tell(new ManagerProtocol.PauseSimulation());
+        } else if (resumeButton.isEnabled()) {
+            managerActor.tell(new ManagerProtocol.ResumeSimulation());
+        }
     }
 
     private Behavior<GUIProtocol.Command> onRenderFrame(GUIProtocol.RenderFrame msg) {
@@ -249,30 +273,23 @@ public class GUIActor implements ChangeListener {
     }
 
     private Behavior<GUIProtocol.Command> onConfirmPause(GUIProtocol.ConfirmPause msg) {
-        setWaitingState(false);
-        this.isPaused = true;
         SwingUtilities.invokeLater(() -> statusLabel.setText("Status: " + GUIProtocol.SimulationStatus.PAUSED.getDisplayText()));
-        updateButtonStates();
+        updateButtonStates(false, true, true);
         return Behaviors.same();
     }
 
     private Behavior<GUIProtocol.Command> onConfirmResume (GUIProtocol.ConfirmResume msg) {
-        setWaitingState(false);
-        this.isPaused = false;
         SwingUtilities.invokeLater(() -> statusLabel.setText("Status: " + GUIProtocol.SimulationStatus.RESUMED.getDisplayText()));
-        updateButtonStates();
+        updateButtonStates(true, false, true);
         return Behaviors.same();
     }
 
     private Behavior<GUIProtocol.Command> onConfirmStop(GUIProtocol.Command msg) {
-        setWaitingState(false);
-        this.isRunning = false;
-        this.isPaused = false;
         SwingUtilities.invokeLater(() -> {
             statusLabel.setText("Status: " + GUIProtocol.SimulationStatus.STOPPED.getDisplayText());
             frame.dispose();
         });
-        updateButtonStates();
+        updateButtonStates(false, false, false);
         return Behaviors.same();
     }
 
@@ -319,18 +336,16 @@ public class GUIActor implements ChangeListener {
 
     @Override
     public void stateChanged(ChangeEvent e) {
-        if (!waitingForConfirmation) {
-            double sep = separationSlider.getValue() * 0.1;
-            double coh = cohesionSlider.getValue() * 0.1;
-            double ali = alignmentSlider.getValue() * 0.1;
+        double sep = separationSlider.getValue() * 0.1;
+        double coh = cohesionSlider.getValue() * 0.1;
+        double ali = alignmentSlider.getValue() * 0.1;
 
-            SwingUtilities.invokeLater(() -> {
-                cohesionSlider.setEnabled(false);
-                separationSlider.setEnabled(false);
-                alignmentSlider.setEnabled(false);
-            });
+        SwingUtilities.invokeLater(() -> {
+            cohesionSlider.setEnabled(false);
+            separationSlider.setEnabled(false);
+            alignmentSlider.setEnabled(false);
+        });
 
-            managerActor.tell(new ManagerProtocol.UpdateParams(coh, ali, sep));
-        }
+        managerActor.tell(new ManagerProtocol.UpdateParams(coh, ali, sep));
     }
 }
