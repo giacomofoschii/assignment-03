@@ -4,7 +4,6 @@ import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.*
 import com.typesafe.config.Config
 
-import scala.concurrent.duration.*
 import scala.util.Random
 import pcd.ass03.model.Food
 import pcd.ass03.distributed.{FoodList, FoodManagerMessage, GenerateFood, GetAllFood, RemoveFood}
