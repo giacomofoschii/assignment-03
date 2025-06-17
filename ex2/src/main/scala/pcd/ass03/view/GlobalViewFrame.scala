@@ -7,7 +7,7 @@ import scala.swing._
 import java.awt.Graphics2D
 
 class GlobalViewFrame extends MainFrame:
-  private var world: World = World(WorldSize, WorldSize, Seq.empty, Seq.empty)
+  private var world: World = World(WorldWidth, WorldHeight, Seq.empty, Seq.empty)
 
   title = "Agar.io Global View"
   preferredSize = new Dimension(WindowSize, WindowSize)

@@ -12,7 +12,7 @@ import pcd.ass03.model.World
 import pcd.ass03.GameConfig._
 
 class DistributedLocalView(playerId: String) extends MainFrame:
-  private var world: World = World(WorldSize, WorldSize, Seq.empty, Seq.empty)
+  private var world: World = World(WorldWidth, WorldHeight, Seq.empty, Seq.empty)
   private var playerActor: Option[ActorRef[PlayerActorMessage]] = None
   private var isActive = true
 

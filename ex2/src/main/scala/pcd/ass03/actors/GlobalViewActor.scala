@@ -6,7 +6,7 @@ import akka.util.Timeout
 import pcd.ass03.distributed.*
 import pcd.ass03.model.World
 import pcd.ass03.view.GlobalViewFrame
-import pcd.ass03.GameConfig.{ThirtyMillis, ThreeSeconds, WorldSize}
+import pcd.ass03.GameConfig._
 
 import scala.util.{Failure, Success}
 
@@ -36,5 +36,5 @@ object GlobalViewActor:
               case Success(WorldState(world)) =>
                 UpdateWorld(world)
               case Failure(_) =>
-                UpdateWorld(World(WorldSize, WorldSize, Seq.empty, Seq.empty))
+                UpdateWorld(World(WorldWidth, WorldHeight, Seq.empty, Seq.empty))
             Behaviors.same

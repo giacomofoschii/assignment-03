@@ -79,8 +79,8 @@ object PlayerActor:
             Behaviors.receiveMessage[PlayerActorMessage] :
               case MoveDirection(dx, dy) =>
                 val speed = DefaultSpeed
-                val newX = (currentPlayer.x + dx * speed).max(0).min(WorldSize)
-                val newY = (currentPlayer.y + dy * speed).max(0).min(WorldSize)
+                val newX = (currentPlayer.x + dx * speed).max(0).min(WorldWidth)
+                val newY = (currentPlayer.y + dy * speed).max(0).min(WorldHeight)
 
                 // Send position update to the WorldManager (fire-and-forget)
                 worldManager ! UpdatePlayerPosition(playerId, newX, newY)
