@@ -21,7 +21,7 @@ object FoodManagerActor:
 
         var foodCounter = maxFood
         
-        timers.startTimerAtFixedRate(GenerateFood(5), TwoSeconds)
+        timers.startTimerAtFixedRate(GenerateFood(10), TwoSeconds)
         
         Behaviors.receiveMessage:
           case GenerateFood(count) =>
