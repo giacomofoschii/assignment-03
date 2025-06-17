@@ -1,9 +1,11 @@
 package pcd.ass03.distributed
 
 import akka.cluster.typed._
-
-import pcd.ass03.actors.{GameClusterSupervisor, PlayerActor, WorldManager}
+import pcd.ass03.GameConfig.FiveSeconds
+import pcd.ass03.actors.{GameClusterSupervisorActor, PlayerActor, WorldManagerActor}
 import pcd.ass03.startupWithRole
+
+import scala.concurrent.{Await, TimeoutException}
 import scala.io.StdIn
 
 object GameClient:
@@ -13,12 +15,10 @@ object GameClient:
       StdIn.readLine()
     }
   
-    val system = startupWithRole("client", 0)(GameClusterSupervisor())
-  
-    Thread.sleep(3000)
-    
+    val system = startupWithRole("client", 0)(GameClusterSupervisorActor())
+
     val worldManagerProxy = ClusterSingleton(system).init(
-      SingletonActor(WorldManager(system.settings.config), "WorldManager")
+      SingletonActor(WorldManagerActor(system.settings.config), "WorldManager")
     )
   
     val playerActor = system.systemActorOf(
@@ -29,6 +29,7 @@ object GameClient:
     println(s"Player $playerName connected to the game server")
     println("Use mouse to move around")
     println("Press Enter to exit...")
+
     try {
       StdIn.readLine()
     } catch {
@@ -37,4 +38,10 @@ object GameClient:
     }
   
     println("Terminating client...")
-    system.terminate()
+
+    try {
+      Await.result(system.terminate(), FiveSeconds)
+    } catch {
+      case _: TimeoutException =>
+        println("Timeout during system termination")
+    }

@@ -10,7 +10,7 @@ import pcd.ass03.model.Food
 import pcd.ass03.distributed.{FoodList, FoodManagerMessage, GenerateFood, GetAllFood, RemoveFood}
 import pcd.ass03.GameConfig.TwoSeconds
 
-object FoodManager:
+object FoodManagerActor:
   def apply(config: Config) : Behavior[FoodManagerMessage] =
     Behaviors.setup: context =>
       Behaviors.withTimers: timers =>

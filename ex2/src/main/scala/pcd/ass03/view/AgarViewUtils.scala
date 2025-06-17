@@ -31,24 +31,26 @@ object AgarViewUtils:
     def toScreenLabel(x: Double, y: Double): (Int, Int) =
       ((x - offsetX - playerLabelOffsetX).toInt, (y - offsetY - playerLabelOffsetY).toInt)
 
+    def drawCircle(x: Double, y: Double, radius: Double, fill: Boolean = true): Unit =
+      val intRadius = radius.toInt
+      val diameter = intRadius * 2
+      val (screenX, screenY) = toScreenCenter(x, y, intRadius)
+      if fill then g.fillOval(screenX, screenY, diameter, diameter)
+      else g.drawOval(screenX, screenY, diameter, diameter)
+    
     // Draw foods
     g.setColor(Color.green)
     world.foods.foreach: food =>
-      val radius = food.radius.toInt
-      val diameter = radius * 2
-      val (foodX, foodY) = toScreenCenter(food.x, food.y, radius)
-      g.fillOval(foodX, foodY, diameter, diameter)
+      drawCircle(food.x, food.y, food.radius)
 
     // Draw players
     world.players.foreach: player =>
       val radius = player.radius.toInt
-      val diameter = radius * 2
       val (borderX, borderY) = toScreenCenter(player.x, player.y, radius)
       g.setColor(playerBorderColor)
-      g.drawOval(borderX, borderY, diameter, diameter)
+      drawCircle(player.x, player.y, radius, false)
       g.setColor(playerColor(player.id))
-      val (innerX, innerY) = toScreenCenter(player.x, player.y, radius - playerInnerOffset)
-      g.fillOval(innerX, innerY, diameter - playerInnerBorder, diameter - playerInnerBorder)
+      drawCircle(player.x, player.y, radius - playerInnerOffset)
       g.setColor(playerBorderColor)
       val (labelX, labelY) = toScreenLabel(player.x, player.y)
       g.drawString(player.id, labelX, labelY)

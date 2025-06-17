@@ -29,5 +29,7 @@ case class FoodList(foods: Seq[Food]) extends GameMessage
 trait PlayerActorMessage extends GameMessage
 case class MoveDirection(dx: Double, dy: Double) extends PlayerActorMessage
 case class UpdateView(world: World) extends PlayerActorMessage
+case class PlayerDied(playerId: String) extends PlayerActorMessage
 case object StartAI extends PlayerActorMessage
+case object Respawn extends PlayerActorMessage
 

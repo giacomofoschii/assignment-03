@@ -7,7 +7,7 @@ import akka.cluster.ClusterEvent._
 
 import scala.concurrent.duration._
 
-object GameClusterSupervisor:
+object GameClusterSupervisorActor:
   private trait ClusterCommand
   private case class MemberEventWrapper(event: MemberEvent) extends ClusterCommand
   private case class ReachabilityEventWrapper(event: ReachabilityEvent) extends ClusterCommand
@@ -27,7 +27,7 @@ object GameClusterSupervisor:
         ClusterSingleton(context.system).init(
           SingletonActor(
             Behaviors
-              .supervise(WorldManager(context.system.settings.config))
+              .supervise(WorldManagerActor(context.system.settings.config))
               .onFailure[Exception](SupervisorStrategy.restart),
             "WorldManager")
         )
@@ -35,7 +35,7 @@ object GameClusterSupervisor:
         ClusterSingleton(context.system).init(
           SingletonActor(
             Behaviors
-              .supervise(FoodManager(context.system.settings.config))
+              .supervise(FoodManagerActor(context.system.settings.config))
               .onFailure[Exception](SupervisorStrategy.restart),
             "FoodManager"
           )

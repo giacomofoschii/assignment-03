@@ -2,19 +2,17 @@ package pcd.ass03.distributed
 
 import akka.cluster.typed._
 
-import pcd.ass03.actors.{GameClusterSupervisor, PlayerActor, WorldManager}
+import pcd.ass03.actors.{GameClusterSupervisorActor, PlayerActor, WorldManagerActor}
 import pcd.ass03.startupWithRole
 
 object AIClient:
   def main(args: Array[String]): Unit =
     val numAI = args.headOption.map(_.toInt).getOrElse(4)
 
-    val system = startupWithRole("ai-client", 0)(GameClusterSupervisor())
-
-    Thread.sleep(3000)
+    val system = startupWithRole("ai-client", 0)(GameClusterSupervisorActor())
 
     val worldManagerProxy = ClusterSingleton(system).init(
-      SingletonActor(WorldManager(system.settings.config), "WorldManager")
+      SingletonActor(WorldManagerActor(system.settings.config), "WorldManager")
     )
 
     (1 to numAI).foreach: i =>

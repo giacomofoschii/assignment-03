@@ -12,7 +12,7 @@ import pcd.ass03.distributed._
 import pcd.ass03.model._
 import pcd.ass03.GameConfig._
 
-object WorldManager:
+object WorldManagerActor:
   private case class UpdateFood(foods: Seq[Food]) extends WorldManagerMessage
   private case object NoOp extends WorldManagerMessage
   private case object InitializeFoodManager extends WorldManagerMessage
@@ -35,7 +35,7 @@ object WorldManager:
         timers.startSingleTimer(InitializeFoodManager, TwoSeconds)
 
         val foodManagerProxy = ClusterSingleton(context.system).init(
-          SingletonActor(FoodManager(config), "FoodManager")
+          SingletonActor(FoodManagerActor(config), "FoodManager")
         )
 
         def checkCollisions(player: Player, context: ActorContext[WorldManagerMessage]): Unit =
@@ -51,8 +51,8 @@ object WorldManager:
 
         Behaviors.receiveMessage:
           case InitializeFoodManager =>
-            // Avvia il timer Tick solo dopo l'inizializzazione
-            timers.startTimerAtFixedRate(Tick, FiftyMillis) // Rallentato un po'
+            // Start the Tick timer only after initialization
+            timers.startTimerAtFixedRate(Tick, FiftyMillis) // Slow down a bit
             Behaviors.same
 
           case RegisterPlayer(playerId, replyTo) =>
@@ -98,12 +98,23 @@ object WorldManager:
               case (Some(killer), Some(victim)) =>
                 val grownKiller = killer.grow(victim)
                 world = world.updatePlayer(grownKiller).removePlayers(Seq(victim))
+
+                implicit val Timeout: akka.util.Timeout = HundredMillis
+                context.ask(context.system.receptionist, Receptionist.Find(PlayerActor.PlayerServiceKey, _)):
+                  case Success(listing: Receptionist.Listing) =>
+                    listing.serviceInstances(PlayerActor.PlayerServiceKey).foreach: playerRef =>
+                      if playerRef.path.name == s"Player-$victimId" ||
+                         playerRef.path.name == s"AI-Player-$victimId" then
+                        playerRef ! PlayerDied(victimId)
+                    NoOp
+                  case _ =>
+                    NoOp
+
                 Behaviors.same
-              case _ =>
-                Behaviors.same// Ignore
+              case _ => Behaviors.same
 
           case Tick =>
-            // Aggiorna cibo
+            // Update food
             implicit val timeout: akka.util.Timeout = HundredMillis
             context.ask(foodManagerProxy, GetAllFood.apply):
               case Success(FoodList(foods)) =>
@@ -111,7 +122,7 @@ object WorldManager:
               case Failure(_) =>
                 NoOp
 
-            // Broadcast stato mondo
+            // Broadcast world state
             context.ask(context.system.receptionist, Receptionist.Find(PlayerActor.PlayerServiceKey, _)):
               case Success(listing: Receptionist.Listing) =>
                 val activePlayers = listing.serviceInstances(PlayerActor.PlayerServiceKey)
