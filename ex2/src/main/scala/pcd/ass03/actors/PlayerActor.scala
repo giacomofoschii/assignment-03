@@ -107,11 +107,6 @@ object PlayerActor:
                   localView.foreach(_.showRespawnDialog())
                   waitingForRespawn(localView, worldManager)
 
-                localView.foreach: view =>
-                  view.dispose()
-                context.system.receptionist ! Receptionist.Deregister(PlayerServiceKey, context.self)
-                Behaviors.stopped
-
               case StartAI =>
                 implicit val timeout: Timeout = ThreeSeconds
                 context.ask(worldManager, GetWorldState.apply) :
