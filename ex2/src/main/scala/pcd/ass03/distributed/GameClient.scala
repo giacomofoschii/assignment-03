@@ -1,10 +1,9 @@
 package pcd.ass03.distributed
 
-import akka.actor.typed._
 import akka.cluster.typed._
-import com.typesafe.config.ConfigFactory
 
-import pcd.ass03.actor.{GameClusterSupervisor, PlayerActor, WorldManager}
+import pcd.ass03.actors.{GameClusterSupervisor, PlayerActor, WorldManager}
+import pcd.ass03.startupWithRole
 import scala.io.StdIn
 
 object GameClient:
@@ -14,20 +13,12 @@ object GameClient:
       StdIn.readLine()
     }
   
-    val config = ConfigFactory
-      .parseString(
-        s"""
-          akka.remote.artery.canonical.port=0
-          akka.cluster.roles = [client]
-          """)
-      .withFallback(ConfigFactory.load("agario"))
-  
-    val system = ActorSystem(GameClusterSupervisor(), "agario", config)
+    val system = startupWithRole("client", 0)(GameClusterSupervisor())
   
     Thread.sleep(3000)
     
     val worldManagerProxy = ClusterSingleton(system).init(
-      SingletonActor(WorldManager(config), "WorldManager")
+      SingletonActor(WorldManager(system.settings.config), "WorldManager")
     )
   
     val playerActor = system.systemActorOf(

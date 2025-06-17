@@ -10,7 +10,6 @@ trait Messages
 trait GameMessage extends Messages
 
 trait WorldManagerMessage extends GameMessage
-
 case class RegisterPlayer(playerId: String, ref: ActorRef[PlayerRegistered]) extends WorldManagerMessage
 case class UnregisterPlayer(playerId: String) extends WorldManagerMessage
 case class GetWorldState(replyTo: ActorRef[WorldState]) extends WorldManagerMessage
@@ -22,7 +21,6 @@ case class WorldState (world: World) extends GameMessage
 case class PlayerRegistered(player: Player) extends GameMessage
 
 trait FoodManagerMessage extends GameMessage
-
 case class GenerateFood(count: Int) extends FoodManagerMessage
 case class RemoveFood(foodId: String) extends FoodManagerMessage
 case class GetAllFood(replyTo: ActorRef[FoodList]) extends FoodManagerMessage

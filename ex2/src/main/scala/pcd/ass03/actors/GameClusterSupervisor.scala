@@ -1,4 +1,4 @@
-package pcd.ass03.actor
+package pcd.ass03.actors
 
 import akka.actor.typed._
 import akka.actor.typed.scaladsl._
@@ -42,13 +42,6 @@ object GameClusterSupervisor:
         )
       else
         println("Client node initialized")
-
-      context.spawn(
-        Behaviors
-          .supervise(PlayerRegistry())
-          .onFailure[Exception](SupervisorStrategy.restart.withLimit(3, 10.seconds)),
-        "PlayerRegistry"
-      )
 
       val memberEventAdapter =  context.messageAdapter[MemberEvent](MemberEventWrapper.apply)
       val reachabilityEventAdapter = context.messageAdapter[ReachabilityEvent](ReachabilityEventWrapper.apply)

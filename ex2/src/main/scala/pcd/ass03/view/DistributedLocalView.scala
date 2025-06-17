@@ -7,13 +7,14 @@ import scala.swing._
 
 import pcd.ass03.distributed.{MoveDirection, PlayerActorMessage}
 import pcd.ass03.model.World
+import pcd.ass03.GameConfig._
 
 class DistributedLocalView(playerId: String) extends MainFrame:
-  private var world: World = World(1000, 1000, Seq.empty, Seq.empty)
+  private var world: World = World(WorldSize, WorldSize, Seq.empty, Seq.empty)
   private var playerActor: Option[ActorRef[PlayerActorMessage]] = None
 
   title = s"Agar.io - Local View ($playerId)"
-  preferredSize = new Dimension(400, 400)
+  preferredSize = new Dimension(WindowSize, WindowSize)
 
   contents = new Panel:
     listenTo(mouse.moves)

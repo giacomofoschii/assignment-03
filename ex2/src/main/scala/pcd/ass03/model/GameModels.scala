@@ -13,6 +13,12 @@ sealed trait Entity:
     val dy = y - other.y
     math.hypot(dx, dy)
 
+trait GameStateManager:
+
+  def getWorld: World
+
+  def movePlayerDirection(id: String, dx: Double, dy: Double): Unit
+
 case class Player(id: String, x: Double, y: Double, mass: Double) extends Entity:
 
   def grow(entity: Entity): Player =

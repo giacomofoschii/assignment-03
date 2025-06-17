@@ -1,4 +1,4 @@
-package pcd.ass03.actor
+package pcd.ass03.actors
 
 import akka.actor.typed._
 import akka.actor.typed.scaladsl._
@@ -6,12 +6,12 @@ import akka.actor.typed.receptionist._
 import akka.actor.typed.scaladsl.AskPattern._
 import akka.util.Timeout
 
-import scala.concurrent.duration._
 import scala.util.{Success, Failure}
 
 import pcd.ass03.distributed._
 import pcd.ass03.model._
 import pcd.ass03.view.DistributedLocalView
+import pcd.ass03.GameConfig._
 
 object PlayerActor:
   val PlayerServiceKey: ServiceKey[PlayerActorMessage] = ServiceKey[PlayerActorMessage]("PlayerActor")
@@ -28,7 +28,7 @@ object PlayerActor:
           def initializing(): Behavior[PlayerActorMessage] = {
             context.system.receptionist ! Receptionist.Register(PlayerServiceKey, context.self)
 
-            implicit val timeout: Timeout = 3.seconds
+            implicit val timeout: Timeout = ThreeSeconds
             context.ask(worldManager, RegisterPlayer(playerId, _)) {
               case Success(PlayerRegistered(player)) =>
                 println(s"Player $playerId successfully registered")
@@ -43,12 +43,12 @@ object PlayerActor:
                 case InitializeComplete(player) =>
                   println(s"Player $playerId initialization complete")
                   stash.unstashAll(active(player, None))
-  
+
                 case RegistrationFailed =>
                   println(s"Registration failed for player $playerId")
                   context.system.receptionist ! Receptionist.Deregister(PlayerServiceKey, context.self)
                   Behaviors.stopped
-  
+
                 case other =>
                   stash.stash(other)
                   Behaviors.same
@@ -73,7 +73,7 @@ object PlayerActor:
 
             if isAI then
               Behaviors.withTimers[PlayerActorMessage] { timers =>
-                timers.startTimerAtFixedRate("ai-movement", StartAI, 100.millis)
+                timers.startTimerAtFixedRate("ai-movement", StartAI, HundredMillis)
                 handleMessages(currentPlayer, view)
               }
             else
@@ -84,9 +84,9 @@ object PlayerActor:
           Behavior[PlayerActorMessage] = {
             Behaviors.receiveMessage[PlayerActorMessage] {
               case MoveDirection(dx, dy) =>
-                val speed = 10.0
-                val newX = (currentPlayer.x + dx * speed).max(0).min(1000) // Assumendo mondo 1000x1000
-                val newY = (currentPlayer.y + dy * speed).max(0).min(1000)
+                val speed = DefaultSpeed
+                val newX = (currentPlayer.x + dx * speed).max(0).min(WorldSize)
+                val newY = (currentPlayer.y + dy * speed).max(0).min(WorldSize)
 
                 // Invia aggiornamento posizione al WorldManager (fire-and-forget)
                 worldManager ! UpdatePlayerPosition(playerId, newX, newY)
@@ -103,7 +103,7 @@ object PlayerActor:
                 handleMessages(updatedPlayer, localView)
 
               case StartAI =>
-                implicit val timeout: Timeout = 3.seconds
+                implicit val timeout: Timeout = ThreeSeconds
                 context.ask(worldManager, GetWorldState.apply) {
                   case Success(WorldState(world)) =>
                     AIMovement.nearestFood(playerId, world).foreach { food =>
@@ -112,12 +112,12 @@ object PlayerActor:
                       val distance = math.hypot(dx, dy)
 
                       if distance > 0 then
-                        // Normalizza direzione e invia comando movimento
+                        // Normalized the direction vector
                         val normalizedDx = dx / distance
                         val normalizedDy = dy / distance
                         context.self ! MoveDirection(normalizedDx, normalizedDy)
                     }
-                    UpdateView(world) // Aggiorna anche la vista con i nuovi dati
+                    UpdateView(world) // Update also the view with the current world state
 
                   case Failure(ex) =>
                     ViewUpdateFailed(ex)

@@ -1,4 +1,4 @@
-package pcd.ass03.actor
+package pcd.ass03.actors
 
 import akka.actor.typed._
 import akka.actor.typed.scaladsl._
@@ -6,11 +6,11 @@ import akka.actor.typed.receptionist.Receptionist
 import akka.cluster.typed._
 import com.typesafe.config.Config
 
-import scala.concurrent.duration._
 import scala.util.{Success, Failure, Random}
 
 import pcd.ass03.distributed._
 import pcd.ass03.model._
+import pcd.ass03.GameConfig._
 
 object WorldManager:
   private case class UpdateFood(foods: Seq[Food]) extends WorldManagerMessage
@@ -32,7 +32,7 @@ object WorldManager:
         var world = World(width, height, Seq.empty, Seq.empty)
         var registeredPlayers = Set.empty[ActorRef[PlayerActorMessage]]
 
-        timers.startSingleTimer(InitializeFoodManager, 2.seconds)
+        timers.startSingleTimer(InitializeFoodManager, TwoSeconds)
 
         val foodManagerProxy = ClusterSingleton(context.system).init(
           SingletonActor(FoodManager(config), "FoodManager")
@@ -52,7 +52,7 @@ object WorldManager:
         Behaviors.receiveMessage:
           case InitializeFoodManager =>
             // Avvia il timer Tick solo dopo l'inizializzazione
-            timers.startTimerAtFixedRate(Tick, 50.millis) // Rallentato un po'
+            timers.startTimerAtFixedRate(Tick, FiftyMillis) // Rallentato un po'
             Behaviors.same
 
           case RegisterPlayer(playerId, replyTo) =>
@@ -61,7 +61,7 @@ object WorldManager:
               playerId,
               Random.nextInt(width),
               Random.nextInt(height),
-              120.0
+              PlayerMass
             )
             world = world.copy(players = world.players :+ player)
             replyTo ! PlayerRegistered(player)
@@ -104,7 +104,7 @@ object WorldManager:
 
           case Tick =>
             // Aggiorna cibo
-            implicit val timeout: akka.util.Timeout = 100.millis
+            implicit val timeout: akka.util.Timeout = HundredMillis
             context.ask(foodManagerProxy, GetAllFood.apply):
               case Success(FoodList(foods)) =>
                 UpdateFood(foods)
