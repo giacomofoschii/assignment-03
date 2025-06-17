@@ -52,7 +52,7 @@ object WorldManagerActor:
         Behaviors.receiveMessage:
           case InitializeFoodManager =>
             // Start the Tick timer only after initialization
-            timers.startTimerAtFixedRate(Tick, FiftyMillis) // Slow down a bit
+            timers.startTimerAtFixedRate(Tick, FiftyMillis)
             Behaviors.same
 
           case RegisterPlayer(playerId, replyTo) =>
@@ -103,6 +103,7 @@ object WorldManagerActor:
                 context.ask(context.system.receptionist, Receptionist.Find(PlayerActor.PlayerServiceKey, _)):
                   case Success(listing: Receptionist.Listing) =>
                     listing.serviceInstances(PlayerActor.PlayerServiceKey).foreach: playerRef =>
+                      val pathname = playerRef.path.name
                       if playerRef.path.name == s"Player-$victimId" ||
                          playerRef.path.name == s"AI-Player-$victimId" then
                         playerRef ! PlayerDied(victimId)
@@ -111,7 +112,9 @@ object WorldManagerActor:
                     NoOp
 
                 Behaviors.same
-              case _ => Behaviors.same
+              case _ =>
+                println(s"Could not find killer: $killerId or victim: $victimId in world")
+                Behaviors.same
 
           case Tick =>
             // Update food
@@ -128,10 +131,10 @@ object WorldManagerActor:
                 val activePlayers = listing.serviceInstances(PlayerActor.PlayerServiceKey)
                 registeredPlayers = activePlayers
                 activePlayers.foreach: actorRef =>
-                  val playerStillExist = world.players.exists(p =>
-                    actorRef.path.name.contains(p.id) ||
-                    actorRef.path.name == s"Player-${p.id}" ||
-                    actorRef.path.name == s"AI-Player-${p.id}")
+                  val pathName = actorRef.path.name
+                  val playerStillExist = world.players.exists: p =>
+                    pathName == s"Player-${p.id}" || pathName == s"AI-Player-${p.id}"
+
                   if playerStillExist then
                     actorRef ! UpdateView(world)
 
