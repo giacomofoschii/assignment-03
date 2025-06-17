@@ -27,8 +27,8 @@ object WorldManagerActor:
       println("Starting WorldManager")
 
       Behaviors.withTimers: timers =>
-        val width = config.getInt("game.world.width")
-        val height = config.getInt("game.world.height")
+        val width = WorldWidth
+        val height = WorldHeight
         var world = World(width, height, Seq.empty, Seq.empty)
         var registeredPlayers = Set.empty[ActorRef[PlayerActorMessage]]
 

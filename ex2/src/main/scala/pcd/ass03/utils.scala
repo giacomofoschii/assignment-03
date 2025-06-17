@@ -14,7 +14,9 @@ object GameConfig:
   val FiftyMillis: FiniteDuration = 50.millis
   val HundredMillis: FiniteDuration = 100.millis
   val DefaultSpeed = 10.0
-  val WorldSize = 1400
+  val WorldWidth = 1400
+  val WorldHeight = 1400
+  val MaxFood = 200
   val WindowSize = 800
   val PlayerMass = 120.0
 

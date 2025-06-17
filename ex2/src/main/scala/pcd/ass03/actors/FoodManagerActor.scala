@@ -8,15 +8,15 @@ import scala.concurrent.duration.*
 import scala.util.Random
 import pcd.ass03.model.Food
 import pcd.ass03.distributed.{FoodList, FoodManagerMessage, GenerateFood, GetAllFood, RemoveFood}
-import pcd.ass03.GameConfig.TwoSeconds
+import pcd.ass03.GameConfig._
 
 object FoodManagerActor:
   def apply(config: Config) : Behavior[FoodManagerMessage] =
     Behaviors.setup: context =>
       Behaviors.withTimers: timers =>
-        val width = config.getInt("game.world.width")
-        val height = config.getInt("game.world.height")
-        val maxFood = config.getInt("game.food.max")
+        val width = WorldWidth
+        val height = WorldHeight
+        val maxFood = MaxFood
         var foodList = (1 to maxFood).map(i => Food(s"f$i", Random.nextInt(width), Random.nextInt(height)))
 
         var foodCounter = maxFood
