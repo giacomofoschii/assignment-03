@@ -1,11 +1,10 @@
 package pcd.ass03.distributed
 
 import akka.cluster.typed._
-import pcd.ass03.GameConfig.FiveSeconds
 import pcd.ass03.actors.{GameClusterSupervisorActor, PlayerActor, WorldManagerActor}
 import pcd.ass03.startupWithRole
 
-import scala.concurrent.{Await, TimeoutException}
+import scala.concurrent.TimeoutException
 import scala.io.StdIn
 
 object GameClient:

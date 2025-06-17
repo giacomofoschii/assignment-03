@@ -139,7 +139,7 @@ object WorldManagerActor:
                     actorRef ! UpdateView(world)
 
                 PlayersUpdate(activePlayers)
-              case Failure(_) =>
+              case _ =>
                 NoOp
 
             Behaviors.same
