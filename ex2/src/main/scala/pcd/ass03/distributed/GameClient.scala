@@ -40,7 +40,7 @@ object GameClient:
     println("Terminating client...")
 
     try {
-      Await.result(system.terminate(), FiveSeconds)
+      system.terminate()
     } catch {
       case _: TimeoutException =>
         println("Timeout during system termination")
