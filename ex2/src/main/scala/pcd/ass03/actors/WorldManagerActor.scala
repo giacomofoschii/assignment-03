@@ -120,7 +120,6 @@ object WorldManagerActor:
                 Behaviors.same
 
           case Tick =>
-            println("WorldManager Tick")
             implicit val timeout: akka.util.Timeout = HundredMillis
             context.ask(foodManagerProxy, GetAllFood.apply):
               case Success(FoodList(foods)) =>
@@ -131,7 +130,6 @@ object WorldManagerActor:
             // Broadcast world state
             context.ask(context.system.receptionist, Receptionist.Find(PlayerActor.PlayerServiceKey, _)):
               case Success(listing: Receptionist.Listing) =>
-                println("Broadcasting world state to all players")
                 val activePlayers = listing.serviceInstances(PlayerActor.PlayerServiceKey)
                 registeredPlayers = activePlayers
                 activePlayers.foreach: actorRef =>
@@ -140,12 +138,10 @@ object WorldManagerActor:
                     pathName == s"Player-${p.id}" || pathName == s"AI-Player-${p.id}"
 
                   if playerStillExist then
-                    println(s"Updating player $pathName with world state, player still exists")
                     actorRef ! UpdateView(world)
 
                 PlayersUpdate(activePlayers)
               case _ =>
-                println("Could not find any players in the world")
                 NoOp
 
             Behaviors.same
@@ -155,7 +151,6 @@ object WorldManagerActor:
             Behaviors.same
 
           case PlayersUpdate(players) =>
-            println(s"Updating registered players: ${players.map(_.path.name).mkString(", ")}")
             registeredPlayers = players
             Behaviors.same
 
