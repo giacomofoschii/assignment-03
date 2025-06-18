@@ -106,18 +106,15 @@ object PlayerActor:
                 handleMessages(updatedPlayer, localView, timers)
 
               case PlayerDied(id) if id == playerId =>
-                println(s"Player $playerId has died.")
                 if isAI && timers != null then
                   timers.cancel("ai-movement") // Stop AI movement timer on death
 
                 if isAI then
-                  println(s"AI player $playerId died, waiting for respawn...")
                   Behaviors.withTimers[PlayerActorMessage] { respawnTimers =>
-                    respawnTimers.startSingleTimer("respawn", Respawn, FiveSeconds)
+                    respawnTimers.startSingleTimer("respawn", Respawn, ThreeSeconds)
                     waitingForRespawn(localView, worldManager, isAI)
                   }
                 else
-                  println(s"Player $playerId died, showing respawn dialog...")
                   localView.foreach(_.showRespawnDialog())
                   waitingForRespawn(localView, worldManager, isAI)
 
@@ -144,19 +141,15 @@ object PlayerActor:
                 Behaviors.same
 
               case ViewUpdateFailed(error) =>
-                println(s"Failed to update view: ${error.getMessage}")
                 Behaviors.same
 
               case InitializeComplete(_) | RegistrationFailed =>
-                println(s"Unexpected message during active state for player $playerId")
                 Behaviors.same
 
               case PlayerDied(_) =>
-                println(s"Player $playerId is already dead, ignoring death message.")
                 Behaviors.same
 
               case Respawn =>
-                println(s"Player $playerId is already active, ignoring respawn request.")
                 Behaviors.same
 
           def waitingForRespawn(localView: Option[DistributedLocalView], worldManager: ActorRef[WorldManagerMessage],
@@ -164,44 +157,35 @@ object PlayerActor:
             Behaviors.withTimers : timers =>
               Behaviors.receiveMessage :
                 case Respawn =>
-                  println(s"Player $playerId is respawning...")
                   implicit val timeout: Timeout = ThreeSeconds
                   context.ask(worldManager, RegisterPlayer(playerId, _)) :
                     case Success(PlayerRegistered(player)) =>
-                      println(s"Player $playerId respawned successfully")
                       localView.foreach(_.setActive(true))
                       InitializeComplete(player)
                     case _ =>
                       if isAI then
-                        println(s"AI player $playerId failed to respawn, retrying...")
                         timers.startSingleTimer("retry-registration", Respawn, ThreeSeconds)
                       RegistrationFailed
 
                   Behaviors.same
 
                 case InitializeComplete(player) =>
-                  println(s"Player $playerId respawned successfully, initializing")
                   active(player, localView)
 
                 case UpdateView(world) =>
-                  println(s"Received world update while waiting for respawn for player $playerId")
                   localView.foreach(_.updateWorld(world))
                   Behaviors.same
 
                 case PlayerDied(_) =>
-                  println(s"Player $playerId is dead and waiting for respawn, ignoring other death messages.")
                   Behaviors.same // Ignore further death messages while waiting to respawn
 
                 case StartAI =>
-                  println(s"AI player $playerId is waiting for respawn, ignoring AI movement.")
                   Behaviors.same
 
                 case MoveDirection(_, _) =>
-                  println(s"Player $playerId is dead, ignoring moveDirection messages.")
                   Behaviors.same
 
                 case other =>
-                  println(s"Unexpected message while waiting for respawn: $other")
                   Behaviors.same
 
           initializing()

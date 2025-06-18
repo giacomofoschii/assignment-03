@@ -93,7 +93,6 @@ object WorldManagerActor:
             Behaviors.same
 
           case AtePlayer(killerId, victimId) =>
-            println(s"Player $killerId ate player $victimId")
             (world.playerById(killerId), world.playerById(victimId)) match
               case (Some(killer), Some(victim)) =>
                 val grownKiller = killer.grow(victim)
@@ -102,21 +101,22 @@ object WorldManagerActor:
                 implicit val Timeout: akka.util.Timeout = HundredMillis
                 context.ask(context.system.receptionist, Receptionist.Find(PlayerActor.PlayerServiceKey, _)):
                   case Success(listing: Receptionist.Listing) =>
-                    println(s"Broadcasting death of player $victimId to all players")
                     listing.serviceInstances(PlayerActor.PlayerServiceKey).foreach: playerRef =>
                       val pathname = playerRef.path.name
-                      if playerRef.path.name == s"Player-$victimId" ||
-                         playerRef.path.name == s"AI-Player-$victimId" then
-                        println(s"Notifying player $pathname of death")
+                      val isTargetPlayer = if victimId.startsWith("AI-") then
+                        val aiNumber = victimId.substring(3)
+                        pathname == s"AI-Player-$aiNumber"
+                      else
+                        pathname == s"Player-$victimId"
+
+                      if isTargetPlayer then
                         playerRef ! PlayerDied(victimId)
                     NoOp
                   case _ =>
-                    println(s"Could not find player $killerId or $victimId in world")
                     NoOp
 
                 Behaviors.same
               case _ =>
-                println(s"Could not find killer: $killerId or victim: $victimId in world")
                 Behaviors.same
 
           case Tick =>
@@ -135,8 +135,12 @@ object WorldManagerActor:
                 activePlayers.foreach: actorRef =>
                   val pathName = actorRef.path.name
                   val playerStillExist = world.players.exists: p =>
-                    pathName == s"Player-${p.id}" || pathName == s"AI-Player-${p.id}"
-
+                    if p.id.startsWith("AI-") then
+                      val aiNumber = p.id.substring(3)
+                      pathName == s"AI-Player-$aiNumber"
+                    else
+                      pathName == s"Player-${p.id}"
+                      
                   if playerStillExist then
                     actorRef ! UpdateView(world)
 

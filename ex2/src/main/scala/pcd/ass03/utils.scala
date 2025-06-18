@@ -16,8 +16,8 @@ object GameConfig:
   val DefaultSpeed = 10.0
   val WorldWidth = 1400
   val WorldHeight = 1400
-  val MaxFood = 200
-  val WindowSize = 800
+  val MaxFood = 150
+  val WindowSize = 850
   val PlayerMass = 120.0
 
 def startupWithRole[X](role: String, port: Int, file: String = "agario")(root: => Behavior[X]): ActorSystem[X] =
