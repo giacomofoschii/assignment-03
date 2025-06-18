@@ -14,11 +14,11 @@ object AIClient:
     val worldManagerProxy = ClusterSingleton(system).init(
       SingletonActor(WorldManagerActor(system.settings.config), "WorldManager")
     )
+    
+    Thread.sleep(3000) // Wait for the WorldManager to be ready
 
     (1 to numAI).foreach: i =>
       system.systemActorOf(PlayerActor(s"AI-$i", worldManagerProxy, isAI = true), s"AI-Player-$i")
-
-    println(s"Spawned $numAI AI players")
 
     // Shutdown hook to gracefully terminate the system
     sys.addShutdownHook {

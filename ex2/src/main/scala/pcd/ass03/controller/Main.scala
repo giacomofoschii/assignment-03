@@ -92,18 +92,20 @@ object Main:
     serverThread.setDaemon(true)
     serverThread.start()
 
-    println("AI players joining...")
+    Thread.sleep(2000) // Wait for server to initialize
+    
     val aiThread = new Thread(() => AIClient.main(Array("4")))
     aiThread.setDaemon(true)
     aiThread.start()
 
     val playerName = askPlayerName()
-    println(s"Starting client for player: $playerName")
     GameClient.main(Array(playerName))
 
   private def runAll() : Unit =
     val serverThread = new Thread(() => GameServer.main(Array.empty))
     serverThread.start()
+
+    Thread.sleep(2000) // Wait for server to initialize
 
     val aiThread = new Thread(() => AIClient.main(Array("4")))
     aiThread.start()

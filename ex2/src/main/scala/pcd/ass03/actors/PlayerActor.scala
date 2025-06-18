@@ -25,7 +25,7 @@ object PlayerActor:
       Behaviors.setup : context =>
         Behaviors.withStash(100) : stash =>
 
-          def initializing(): Behavior[PlayerActorMessage] =
+          def initializing(retryCount: Int = 0): Behavior[PlayerActorMessage] =
             context.system.receptionist ! Receptionist.Register(PlayerServiceKey, context.self)
 
             implicit val timeout: Timeout = ThreeSeconds
@@ -35,13 +35,23 @@ object PlayerActor:
                 InitializeComplete(player)
               case _ =>
                 println(s"Failed to register player $playerId")
-                RegistrationFailed
+                if retryCount < 3 && isAI then
+                  Thread.sleep(1000)
+                  InitializeComplete(null)
+                else
+                  RegistrationFailed
 
             Behaviors
               .receiveMessage[PlayerActorMessage]:
                 case InitializeComplete(player) =>
-                  println(s"Player $playerId initialization complete")
-                  stash.unstashAll(active(player, None))
+                  if player != null then
+                    println(s"Player $playerId initialization complete")
+                    stash.unstashAll(active(player, None))
+                  else if isAI && retryCount < 3 then
+                    initializing(retryCount + 1)
+                  else
+                    context.system.receptionist ! Receptionist.Deregister(PlayerServiceKey, context.self)
+                    Behaviors.stopped
 
                 case RegistrationFailed =>
                   println(s"Registration failed for player $playerId")
@@ -144,37 +154,40 @@ object PlayerActor:
 
           def waitingForRespawn(localView: Option[DistributedLocalView], worldManager: ActorRef[WorldManagerMessage],
                                 isAI: Boolean): Behavior[PlayerActorMessage] =
-            Behaviors.receiveMessage :
-              case Respawn =>
-                implicit val timeout: Timeout = ThreeSeconds
-                context.ask(worldManager, RegisterPlayer(playerId, _)) :
-                  case Success(PlayerRegistered(player)) =>
-                    localView.foreach(_.setActive(true))
-                    InitializeComplete(player)
-                  case _ =>
-                    RegistrationFailed
-
-                Behaviors.same
-
-              case InitializeComplete(player) =>
-                active(player, localView)
-
-              case UpdateView(world) =>
-                localView.foreach(_.updateWorld(world))
-                Behaviors.same
-
-              case PlayerDied(_) =>
-                Behaviors.same // Ignore further death messages while waiting to respawn
-
-              case StartAI =>
-                Behaviors.same
-
-              case MoveDirection(_, _) =>
-                Behaviors.same
-
-              case other =>
-                println(s"Unexpected message while waiting for respawn: $other")
-                Behaviors.same
+            Behaviors.withTimers : timers =>
+              Behaviors.receiveMessage :
+                case Respawn =>
+                  implicit val timeout: Timeout = ThreeSeconds
+                  context.ask(worldManager, RegisterPlayer(playerId, _)) :
+                    case Success(PlayerRegistered(player)) =>
+                      localView.foreach(_.setActive(true))
+                      InitializeComplete(player)
+                    case _ =>
+                      if isAI then
+                        timers.startSingleTimer("retry-registration", Respawn, ThreeSeconds)
+                      RegistrationFailed
+  
+                  Behaviors.same
+  
+                case InitializeComplete(player) =>
+                  active(player, localView)
+  
+                case UpdateView(world) =>
+                  localView.foreach(_.updateWorld(world))
+                  Behaviors.same
+  
+                case PlayerDied(_) =>
+                  Behaviors.same // Ignore further death messages while waiting to respawn
+  
+                case StartAI =>
+                  Behaviors.same
+  
+                case MoveDirection(_, _) =>
+                  Behaviors.same
+  
+                case other =>
+                  println(s"Unexpected message while waiting for respawn: $other")
+                  Behaviors.same
 
           initializing()
 
