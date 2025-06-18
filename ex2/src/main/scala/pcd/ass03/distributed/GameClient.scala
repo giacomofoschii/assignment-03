@@ -35,8 +35,7 @@ object GameClient:
       case _: Exception =>
         println("Input interrupted, shutting down...")
     }
-  
-    println("Terminating client...")
+    
 
     try {
       system.terminate()

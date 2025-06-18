@@ -24,7 +24,6 @@ object WorldManagerActor:
 
   private def worldManagerBehavior(config: Config): Behavior[WorldManagerMessage] =
     Behaviors.setup: context =>
-      println("Starting WorldManager")
 
       Behaviors.withTimers: timers =>
         val width = WorldWidth
@@ -94,6 +93,7 @@ object WorldManagerActor:
             Behaviors.same
 
           case AtePlayer(killerId, victimId) =>
+            println(s"Player $killerId ate player $victimId")
             (world.playerById(killerId), world.playerById(victimId)) match
               case (Some(killer), Some(victim)) =>
                 val grownKiller = killer.grow(victim)
@@ -102,13 +102,16 @@ object WorldManagerActor:
                 implicit val Timeout: akka.util.Timeout = HundredMillis
                 context.ask(context.system.receptionist, Receptionist.Find(PlayerActor.PlayerServiceKey, _)):
                   case Success(listing: Receptionist.Listing) =>
+                    println(s"Broadcasting death of player $victimId to all players")
                     listing.serviceInstances(PlayerActor.PlayerServiceKey).foreach: playerRef =>
                       val pathname = playerRef.path.name
                       if playerRef.path.name == s"Player-$victimId" ||
                          playerRef.path.name == s"AI-Player-$victimId" then
+                        println(s"Notifying player $pathname of death")
                         playerRef ! PlayerDied(victimId)
                     NoOp
                   case _ =>
+                    println(s"Could not find player $killerId or $victimId in world")
                     NoOp
 
                 Behaviors.same
@@ -117,7 +120,7 @@ object WorldManagerActor:
                 Behaviors.same
 
           case Tick =>
-            // Update food
+            println("WorldManager Tick")
             implicit val timeout: akka.util.Timeout = HundredMillis
             context.ask(foodManagerProxy, GetAllFood.apply):
               case Success(FoodList(foods)) =>
@@ -128,6 +131,7 @@ object WorldManagerActor:
             // Broadcast world state
             context.ask(context.system.receptionist, Receptionist.Find(PlayerActor.PlayerServiceKey, _)):
               case Success(listing: Receptionist.Listing) =>
+                println("Broadcasting world state to all players")
                 val activePlayers = listing.serviceInstances(PlayerActor.PlayerServiceKey)
                 registeredPlayers = activePlayers
                 activePlayers.foreach: actorRef =>
@@ -136,10 +140,12 @@ object WorldManagerActor:
                     pathName == s"Player-${p.id}" || pathName == s"AI-Player-${p.id}"
 
                   if playerStillExist then
+                    println(s"Updating player $pathName with world state, player still exists")
                     actorRef ! UpdateView(world)
 
                 PlayersUpdate(activePlayers)
               case _ =>
+                println("Could not find any players in the world")
                 NoOp
 
             Behaviors.same
@@ -149,6 +155,7 @@ object WorldManagerActor:
             Behaviors.same
 
           case PlayersUpdate(players) =>
+            println(s"Updating registered players: ${players.map(_.path.name).mkString(", ")}")
             registeredPlayers = players
             Behaviors.same
 

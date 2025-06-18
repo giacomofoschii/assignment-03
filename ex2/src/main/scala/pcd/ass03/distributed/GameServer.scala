@@ -16,7 +16,6 @@ object GameServer extends App:
   system.systemActorOf(GlobalViewActor(worldManagerProxy), "GlobalView")
 
   println(s"Game server started on port $portNum")
-  println("Global view opened")
 
   // Shutdown hook to gracefully terminate the actor system
   sys.addShutdownHook {

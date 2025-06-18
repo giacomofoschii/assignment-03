@@ -23,7 +23,6 @@ object GameClusterSupervisorActor:
       val cluster = Cluster(context.system)
 
       if cluster.selfMember.roles.contains("server") then
-        println("Initializing cluster singletons on server node")
         ClusterSingleton(context.system).init(
           SingletonActor(
             Behaviors
@@ -40,8 +39,6 @@ object GameClusterSupervisorActor:
             "FoodManager"
           )
         )
-      else
-        println("Client node initialized")
 
       val memberEventAdapter =  context.messageAdapter[MemberEvent](MemberEventWrapper.apply)
       val reachabilityEventAdapter = context.messageAdapter[ReachabilityEvent](ReachabilityEventWrapper.apply)
