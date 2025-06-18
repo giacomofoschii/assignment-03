@@ -1,7 +1,6 @@
 package pcd.ass03.distributed
 
 import akka.cluster.typed._
-
 import pcd.ass03.actors.{GameClusterSupervisorActor, PlayerActor, WorldManagerActor}
 import pcd.ass03.startupWithRole
 
@@ -15,7 +14,7 @@ object AIClient:
       SingletonActor(WorldManagerActor(system.settings.config), "WorldManager")
     )
     
-    Thread.sleep(3000) // Wait for the WorldManager to be ready
+    Thread.sleep(2000) // Wait for the WorldManager to be ready
 
     (1 to numAI).foreach: i =>
       system.systemActorOf(PlayerActor(s"AI-$i", worldManagerProxy, isAI = true), s"AI-Player-$i")

@@ -25,48 +25,46 @@ object PlayerActor:
       Behaviors.setup : context =>
         Behaviors.withStash(100) : stash =>
 
-          def initializing(retryCount: Int = 0): Behavior[PlayerActorMessage] =
-            context.system.receptionist ! Receptionist.Register(PlayerServiceKey, context.self)
-
-            implicit val timeout: Timeout = ThreeSeconds
-            context.ask(worldManager, RegisterPlayer(playerId, _)):
-              case Success(PlayerRegistered(player)) =>
-                println(s"Player $playerId successfully registered")
-                InitializeComplete(player)
-              case _ =>
-                println(s"Failed to register player $playerId")
-                if retryCount < 3 && isAI then
-                  Thread.sleep(1000)
-                  InitializeComplete(null)
-                else
-                  RegistrationFailed
-
-            Behaviors
-              .receiveMessage[PlayerActorMessage]:
-                case InitializeComplete(player) =>
-                  if player != null then
-                    println(s"Player $playerId initialization complete")
-                    stash.unstashAll(active(player, None))
-                  else if isAI && retryCount < 3 then
-                    initializing(retryCount + 1)
+          def initializing(retryCount: Int = 0, registrationInProgress: Boolean = false): Behavior[PlayerActorMessage] =
+            if !registrationInProgress then
+              context.system.receptionist ! Receptionist.Register(PlayerServiceKey, context.self)
+  
+              implicit val timeout: Timeout = ThreeSeconds
+              context.ask(worldManager, RegisterPlayer(playerId, _)):
+                case Success(PlayerRegistered(player)) =>
+                  println(s"Player $playerId successfully registered")
+                  InitializeComplete(player)
+                case _ =>
+                  println(s"Failed to register player $playerId")
+                  if retryCount < 3 && isAI then
+                    RegistrationFailed
                   else
-                    context.system.receptionist ! Receptionist.Deregister(PlayerServiceKey, context.self)
-                    Behaviors.stopped
+                    RegistrationFailed
 
-                case RegistrationFailed =>
-                  println(s"Registration failed for player $playerId")
+            Behaviors.receiveMessage[PlayerActorMessage]:
+              case InitializeComplete(player) =>
+                println(s"Player $playerId initialization complete")
+                stash.unstashAll(active(player, None))
+
+              case RegistrationFailed =>
+                if isAI && retryCount < 3 then
+                  Behaviors.withTimers[PlayerActorMessage] : timers =>
+                    timers.startSingleTimer("retry-registration", InitializeComplete(null), TwoSeconds)
+                    initializing(retryCount + 1)
+                else 
+                  println(s"Registration permanently failed for player $playerId")
                   context.system.receptionist ! Receptionist.Deregister(PlayerServiceKey, context.self)
                   Behaviors.stopped
 
-                case other =>
-                  stash.stash(other)
-                  Behaviors.same
+              case other =>
+                stash.stash(other)
+                Behaviors.same
 
-              .receiveSignal:
-                case (context, PostStop) =>
-                  context.system.receptionist ! Receptionist.Deregister(PlayerServiceKey, context.self)
-                  worldManager ! UnregisterPlayer(playerId)
-                  Behaviors.same
+            .receiveSignal:
+              case (context, PostStop) =>
+                context.system.receptionist ! Receptionist.Deregister(PlayerServiceKey, context.self)
+                worldManager ! UnregisterPlayer(playerId)
+                Behaviors.same
 
           def active(currentPlayer: Player, localView: Option[DistributedLocalView]): Behavior[PlayerActorMessage] =
             val view = localView match

@@ -17,15 +17,27 @@ object WorldManagerActor:
   private case object NoOp extends WorldManagerMessage
   private case object InitializeFoodManager extends WorldManagerMessage
   private case class PlayersUpdate(player: Set[ActorRef[PlayerActorMessage]]) extends WorldManagerMessage
+  private case object ShuttingDown extends WorldManagerMessage
 
   def apply(config: Config): Behavior[WorldManagerMessage] =
     Behaviors.supervise(worldManagerBehavior(config))
       .onFailure(SupervisorStrategy.restart)
 
   private def worldManagerBehavior(config: Config): Behavior[WorldManagerMessage] =
-    Behaviors.setup: context =>
+    Behaviors.setup[WorldManagerMessage]: context =>
+      import akka.actor.typed.scaladsl.adapter._
+      import akka.actor.CoordinatedShutdown
+
+      CoordinatedShutdown(context.system.toClassic).addTask(
+        CoordinatedShutdown.PhaseServiceStop,
+        "stop-world-manager-timers"
+      ) { () =>
+        context.self ! ShuttingDown
+        scala.concurrent.Future.successful(akka.Done)
+      }
 
       Behaviors.withTimers: timers =>
+        var isShuttingDown = false
         val width = WorldWidth
         val height = WorldHeight
         var world = World(width, height, Seq.empty, Seq.empty)
@@ -49,6 +61,12 @@ object WorldManagerActor:
               context.self ! AtePlayer(player.id, other.id)
 
         Behaviors.receiveMessage:
+          case ShuttingDown =>
+            isShuttingDown = true
+            timers.cancelAll()
+            registeredPlayers.foreach(_ ! PlayerDied("SHUTDOWN"))
+            Behaviors.same
+
           case InitializeFoodManager =>
             // Start the Tick timer only after initialization
             timers.startTimerAtFixedRate(Tick, FiftyMillis)
@@ -119,7 +137,7 @@ object WorldManagerActor:
               case _ =>
                 Behaviors.same
 
-          case Tick =>
+          case Tick if !isShuttingDown =>
             implicit val timeout: akka.util.Timeout = HundredMillis
             context.ask(foodManagerProxy, GetAllFood.apply):
               case Success(FoodList(foods)) =>
@@ -140,7 +158,7 @@ object WorldManagerActor:
                       pathName == s"AI-Player-$aiNumber"
                     else
                       pathName == s"Player-${p.id}"
-                      
+
                   if playerStillExist then
                     actorRef ! UpdateView(world)
 
@@ -150,6 +168,9 @@ object WorldManagerActor:
 
             Behaviors.same
 
+          case _ if isShuttingDown =>
+            Behaviors.same
+            
           case UpdateFood(foods) =>
             world = world.copy(foods = foods)
             Behaviors.same
